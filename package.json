@@ -1,0 +1,35 @@
+{
+  "name": "@anderjason/node-filedb",
+  "version": "0.0.1",
+  "description": "",
+  "main": "./dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com:anderjason/node-filedb.git"
+  },
+  "author": "Jason Anderson",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "build": "npm run clean && tsc",
+    "clean": "rm -rf dist && rm -rf test",
+    "test": "tsc -p tsconfig.test.json && node test/index.test && rm -rf test"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "dependencies": {
+    "@anderjason/node-crypto": "^2.0.0",
+    "@anderjason/node-filesystem": "^2.0.0",
+    "@anderjason/time": "^2.0.2",
+    "@anderjason/util": "^2.0.3",
+    "typescript": "^4.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^14.14.6"
+  },
+  "bugs": {
+    "url": "https://github.com/anderjason/node-filedb/issues"
+  },
+  "homepage": "https://github.com/anderjason/node-filedb#readme"
+}
