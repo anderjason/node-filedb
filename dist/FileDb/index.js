@@ -28,24 +28,12 @@ function asyncGivenObservable(observable) {
 class FileDb extends skytree_1.Actor {
     constructor(props) {
         super(props);
+        this._isReady = observable_1.Observable.givenValue(false, observable_1.Observable.isStrictEqual);
+        this.isReady = observable_1.ReadOnlyObservable.givenObservable(this._isReady);
         this._keysByCollection = observable_1.Observable.ofEmpty();
         this._valuesByKeyByIndex = observable_1.Observable.ofEmpty();
         this._allKeys = observable_1.Observable.ofEmpty();
         this._instructions = [];
-        this.toDeletePromise = (key) => {
-            return new Promise((resolve, reject) => {
-                const instruction = {
-                    type: "delete",
-                    key,
-                    resolve,
-                    reject,
-                };
-                this._instructions.push(instruction);
-                if (this._instructions.length === 1) {
-                    this._nextInstruction();
-                }
-            });
-        };
         this._delete = async (rowKey) => {
             if (rowKey.length < 5) {
                 throw new Error("Key length must be at least 5 characters");
@@ -286,14 +274,22 @@ class FileDb extends skytree_1.Actor {
     }
     onActivate() {
         this.addActor(this.props.adapters);
+        const checkIsReady = () => {
+            this._isReady.setValue(this._allKeys.value != null &&
+                this._keysByCollection.value != null &&
+                this._valuesByKeyByIndex.value != null);
+        };
         this.props.adapters.props.dataAdapter.toKeys().then((keys) => {
             this._allKeys.setValue(keys);
+            checkIsReady();
         });
         keysByCollectionGivenAdapter_1.keysByCollectionGivenAdapter(this.props.adapters.props.collectionsAdapter).then((result) => {
             this._keysByCollection.setValue(result);
+            checkIsReady();
         });
         valuesByKeyByIndexGivenFileDbDirectory_1.valuesByKeyByIndexGivenAdapter(this.props.adapters.props.indexesAdapter).then((result) => {
             this._valuesByKeyByIndex.setValue(result);
+            checkIsReady();
         });
     }
     async toCollections() {
@@ -343,7 +339,7 @@ class FileDb extends skytree_1.Actor {
         const results = await this.toRows(Object.assign(Object.assign({}, options), { limit: 1 }));
         return results[0];
     }
-    async toRowGivenKey(key) {
+    async toRow(key) {
         const result = await this.toOptionalRowGivenKey(key);
         if (result == null) {
             throw new Error(`Row not found for key '${key}'`);
@@ -364,13 +360,27 @@ class FileDb extends skytree_1.Actor {
             }
         });
     }
-    toWritePromise(data, key) {
+    writeRow(data, key) {
         return new Promise((resolve, reject) => {
             const instruction = {
                 type: "write",
                 time: time_1.Instant.ofNow(),
                 key,
                 data,
+                resolve,
+                reject,
+            };
+            this._instructions.push(instruction);
+            if (this._instructions.length === 1) {
+                this._nextInstruction();
+            }
+        });
+    }
+    deleteKey(key) {
+        return new Promise((resolve, reject) => {
+            const instruction = {
+                type: "delete",
+                key,
                 resolve,
                 reject,
             };

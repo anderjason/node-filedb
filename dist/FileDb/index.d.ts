@@ -1,6 +1,7 @@
 import { Actor } from "skytree";
 import { Instant } from "@anderjason/time";
 import { FileDbAdapters } from "../FileDbAdapters";
+import { ReadOnlyObservable } from "@anderjason/observable";
 export interface FileDbRow<T> {
     key: string;
     createdAt: Instant;
@@ -32,6 +33,8 @@ export interface FileDbProps<T> {
     cacheSize?: number;
 }
 export declare class FileDb<T> extends Actor<FileDbProps<T>> {
+    private _isReady;
+    readonly isReady: ReadOnlyObservable<boolean>;
     private _rowCache;
     private _keysByCollection;
     private _valuesByKeyByIndex;
@@ -45,10 +48,10 @@ export declare class FileDb<T> extends Actor<FileDbProps<T>> {
     toCount(filter?: string[]): Promise<number>;
     toRows(options?: FileDbReadOptions): Promise<FileDbRow<T>[]>;
     toOptionalFirstRow(options?: FileDbReadOptions): Promise<FileDbRow<T> | undefined>;
-    toRowGivenKey(key: string): Promise<FileDbRow<T>>;
+    toRow(key: string): Promise<FileDbRow<T>>;
     toOptionalRowGivenKey(key: string): Promise<FileDbRow<T> | undefined>;
-    toWritePromise(data: T, key?: string): Promise<FileDbRow<T>>;
-    toDeletePromise: (key: string) => Promise<void>;
+    writeRow(data: T, key?: string): Promise<FileDbRow<T>>;
+    deleteKey(key: string): Promise<void>;
     private _delete;
     private _read;
     private _write;

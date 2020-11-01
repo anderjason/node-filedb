@@ -1,6 +1,5 @@
 import { UniqueId } from "@anderjason/node-crypto";
 import { Actor } from "skytree";
-import { LocalDirectory } from "@anderjason/node-filesystem";
 import { Instant } from "@anderjason/time";
 import { ArrayUtil, PromiseUtil, SetUtil } from "@anderjason/util";
 import { LRUCache } from "../LRUCache";
@@ -9,7 +8,7 @@ import { valuesByKeyByIndexGivenAdapter } from "./_internal/valuesByKeyByIndexGi
 import { updateKeysByCollection } from "./_internal/updateKeysByCollection";
 import { updateValuesByKeyByIndex } from "./_internal/updateValuesByKeyByIndex";
 import { FileDbAdapters, PortableRow } from "../FileDbAdapters";
-import { Observable } from "@anderjason/observable";
+import { Observable, ReadOnlyObservable } from "@anderjason/observable";
 
 function asyncGivenObservable<T>(observable: Observable<T>): Promise<T> {
   if (observable.value != null) {
@@ -110,6 +109,9 @@ export interface FileDbProps<T> {
 }
 
 export class FileDb<T> extends Actor<FileDbProps<T>> {
+  private _isReady = Observable.givenValue(false, Observable.isStrictEqual);
+  readonly isReady = ReadOnlyObservable.givenObservable(this._isReady);
+
   private _rowCache: LRUCache<FileDbRow<T>>;
   private _keysByCollection = Observable.ofEmpty<Map<string, Set<string>>>();
   private _valuesByKeyByIndex = Observable.ofEmpty<
@@ -127,20 +129,31 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
   onActivate(): void {
     this.addActor(this.props.adapters);
 
+    const checkIsReady = () => {
+      this._isReady.setValue(
+        this._allKeys.value != null &&
+          this._keysByCollection.value != null &&
+          this._valuesByKeyByIndex.value != null
+      );
+    };
+
     this.props.adapters.props.dataAdapter.toKeys().then((keys) => {
       this._allKeys.setValue(keys);
+      checkIsReady();
     });
 
     keysByCollectionGivenAdapter(
       this.props.adapters.props.collectionsAdapter
     ).then((result) => {
       this._keysByCollection.setValue(result);
+      checkIsReady();
     });
 
     valuesByKeyByIndexGivenAdapter(
       this.props.adapters.props.indexesAdapter
     ).then((result) => {
       this._valuesByKeyByIndex.setValue(result);
+      checkIsReady();
     });
   }
 
@@ -207,7 +220,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     return results[0];
   }
 
-  async toRowGivenKey(key: string): Promise<FileDbRow<T>> {
+  async toRow(key: string): Promise<FileDbRow<T>> {
     const result = await this.toOptionalRowGivenKey(key);
     if (result == null) {
       throw new Error(`Row not found for key '${key}'`);
@@ -233,7 +246,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     });
   }
 
-  toWritePromise(data: T, key?: string): Promise<FileDbRow<T>> {
+  writeRow(data: T, key?: string): Promise<FileDbRow<T>> {
     return new Promise((resolve, reject) => {
       const instruction: FileDbWriteInstruction<T> = {
         type: "write",
@@ -252,7 +265,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     });
   }
 
-  toDeletePromise = (key: string): Promise<void> => {
+  deleteKey(key: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const instruction: FileDbDeleteInstruction = {
         type: "delete",
@@ -267,7 +280,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
         this._nextInstruction();
       }
     });
-  };
+  }
 
   private _delete = async (rowKey: string): Promise<void> => {
     if (rowKey.length < 5) {

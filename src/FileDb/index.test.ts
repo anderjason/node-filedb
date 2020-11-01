@@ -7,7 +7,6 @@ Test.define("FileDb can be created", () => {
     adapters: FileDbAdapters.ofMemory(),
     collectionsGivenData: (data) => new Set(),
     valuesByIndexGivenData: (data) => new Map(),
-    label: "test",
   });
   fileDb.activate();
 
@@ -19,11 +18,10 @@ Test.define("FileDb can write and read a row", async () => {
     adapters: FileDbAdapters.ofMemory(),
     collectionsGivenData: (data) => new Set(),
     valuesByIndexGivenData: (data) => new Map(),
-    label: "test",
   });
   fileDb.activate();
 
-  const row = await fileDb.toWritePromise({
+  const row = await fileDb.writeRow({
     message: "hello world",
   });
 
@@ -35,7 +33,7 @@ Test.define("FileDb can write and read a row", async () => {
   Test.assert(row.collections != null);
   Test.assert(row.valuesByIndex != null);
 
-  const result = await fileDb.toRowGivenKey(row.key);
+  const result = await fileDb.toRow(row.key);
   Test.assertIsDeepEqual(result, row);
 
   fileDb.deactivate();
@@ -53,11 +51,10 @@ Test.define("FileDb can assign rows to collections", async () => {
       return result;
     },
     valuesByIndexGivenData: (data) => new Map(),
-    label: "test",
   });
   fileDb.activate();
 
-  const row = await fileDb.toWritePromise({
+  const row = await fileDb.writeRow({
     message: "hello world",
   });
 
@@ -79,11 +76,10 @@ Test.define("FileDb can assign values by index", async () => {
 
       return result;
     },
-    label: "test",
   });
   fileDb.activate();
 
-  const row = await fileDb.toWritePromise({
+  const row = await fileDb.writeRow({
     message: "hello world",
   });
 
