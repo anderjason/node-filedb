@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LocalFileAdapter = void 0;
-const node_crypto_1 = require("@anderjason/node-crypto");
 const node_filesystem_1 = require("@anderjason/node-filesystem");
 const util_1 = require("@anderjason/util");
 const skytree_1 = require("skytree");
@@ -50,10 +49,7 @@ class LocalFileAdapter extends skytree_1.Actor {
         await file.deleteFile();
     }
     fileGivenKey(key) {
-        const hash = node_crypto_1.UnsaltedHash.givenUnhashedString(key)
-            .toHashedString()
-            .slice(0, 24);
-        return node_filesystem_1.LocalFile.givenRelativePath(this.props.directory, hash.slice(0, 3), `${hash}.json`);
+        return node_filesystem_1.LocalFile.givenRelativePath(this.props.directory, key.slice(0, 3), `${key}.json`);
     }
 }
 exports.LocalFileAdapter = LocalFileAdapter;

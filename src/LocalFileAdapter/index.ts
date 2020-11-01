@@ -74,14 +74,10 @@ export class LocalFileAdapter<T>
   }
 
   private fileGivenKey(key: string): LocalFile {
-    const hash = UnsaltedHash.givenUnhashedString(key)
-      .toHashedString()
-      .slice(0, 24);
-
     return LocalFile.givenRelativePath(
       this.props.directory,
-      hash.slice(0, 3),
-      `${hash}.json`
+      key.slice(0, 3),
+      `${key}.json`
     );
   }
 }
