@@ -1,5 +1,4 @@
 import { Actor } from "skytree";
-import { LocalDirectory } from "@anderjason/node-filesystem";
 import { Instant } from "@anderjason/time";
 import { FileDbAdapters } from "../FileDbAdapters";
 export interface FileDbRow<T> {
@@ -27,15 +26,12 @@ export interface FileDbReadOptions {
     offset?: number;
 }
 export interface FileDbProps<T> {
-    label: string;
     adapters: FileDbAdapters;
     collectionsGivenData: (data: T) => Set<string>;
     valuesByIndexGivenData: (data: T) => Map<string, number>;
     cacheSize?: number;
 }
 export declare class FileDb<T> extends Actor<FileDbProps<T>> {
-    readonly directory: LocalDirectory;
-    readonly label: string;
     private _rowCache;
     private _keysByCollection;
     private _valuesByKeyByIndex;

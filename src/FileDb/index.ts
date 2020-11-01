@@ -101,7 +101,6 @@ type FileDbInstruction<T> =
   | FileDbListRowsInstruction<T>;
 
 export interface FileDbProps<T> {
-  label: string;
   adapters: FileDbAdapters;
 
   collectionsGivenData: (data: T) => Set<string>;
@@ -111,9 +110,6 @@ export interface FileDbProps<T> {
 }
 
 export class FileDb<T> extends Actor<FileDbProps<T>> {
-  readonly directory: LocalDirectory;
-  readonly label: string;
-
   private _rowCache: LRUCache<FileDbRow<T>>;
   private _keysByCollection = Observable.ofEmpty<Map<string, Set<string>>>();
   private _valuesByKeyByIndex = Observable.ofEmpty<
