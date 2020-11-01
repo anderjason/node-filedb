@@ -1,9 +1,12 @@
-import { Observable } from "@anderjason/observable";
+import { ObservableBase } from "@anderjason/observable";
 
-export function asyncGivenObservable<T>(
-  observable: Observable<T>,
-  filter?: (value: T) => boolean
-): Promise<T> {
+export function asyncGivenObservable<T>({
+  observable,
+  filter,
+}: {
+  observable: ObservableBase<T>;
+  filter?: (value: T) => boolean;
+}): Promise<T> {
   if (observable.value != null) {
     return Promise.resolve(observable.value);
   }

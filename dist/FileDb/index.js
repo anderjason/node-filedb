@@ -32,8 +32,12 @@ class FileDb extends skytree_1.Actor {
             }
             const changedCollections = new Set();
             const changedIndexes = new Set();
-            const keysByCollection = await asyncGivenObservable_1.asyncGivenObservable(this._keysByCollection);
-            const valuesByKeyByIndex = await asyncGivenObservable_1.asyncGivenObservable(this._valuesByKeyByIndex);
+            const keysByCollection = await asyncGivenObservable_1.asyncGivenObservable({
+                observable: this._keysByCollection,
+            });
+            const valuesByKeyByIndex = await asyncGivenObservable_1.asyncGivenObservable({
+                observable: this._valuesByKeyByIndex,
+            });
             existingRow.collections.forEach((collectionKey) => {
                 const rowKeysOfThisCollection = keysByCollection.get(collectionKey);
                 if (rowKeysOfThisCollection != null) {
@@ -130,8 +134,12 @@ class FileDb extends skytree_1.Actor {
             serializable.valuesByIndex = obj;
             const changedCollections = new Set();
             const changedIndexes = new Set();
-            const keysByCollection = await asyncGivenObservable_1.asyncGivenObservable(this._keysByCollection);
-            const valuesByKeyByIndex = await asyncGivenObservable_1.asyncGivenObservable(this._valuesByKeyByIndex);
+            const keysByCollection = await asyncGivenObservable_1.asyncGivenObservable({
+                observable: this._keysByCollection,
+            });
+            const valuesByKeyByIndex = await asyncGivenObservable_1.asyncGivenObservable({
+                observable: this._valuesByKeyByIndex,
+            });
             row.collections.forEach((collection) => {
                 if (!keysByCollection.has(collection)) {
                     keysByCollection.set(collection, new Set());
@@ -180,10 +188,12 @@ class FileDb extends skytree_1.Actor {
         this._listKeys = async (options = {}) => {
             let result;
             if (options.filter == null || options.filter.length === 0) {
-                result = await asyncGivenObservable_1.asyncGivenObservable(this._allKeys);
+                result = await asyncGivenObservable_1.asyncGivenObservable({ observable: this._allKeys });
             }
             else {
-                const keysByCollection = await asyncGivenObservable_1.asyncGivenObservable(this._keysByCollection);
+                const keysByCollection = await asyncGivenObservable_1.asyncGivenObservable({
+                    observable: this._keysByCollection,
+                });
                 const sets = options.filter.map((collection) => {
                     return keysByCollection.get(collection) || new Set();
                 });
@@ -191,7 +201,9 @@ class FileDb extends skytree_1.Actor {
             }
             const index = options.orderBy;
             if (index != null) {
-                const valuesByKeyByIndex = await asyncGivenObservable_1.asyncGivenObservable(this._valuesByKeyByIndex);
+                const valuesByKeyByIndex = await asyncGivenObservable_1.asyncGivenObservable({
+                    observable: this._valuesByKeyByIndex,
+                });
                 const valuesByKey = valuesByKeyByIndex.get(index);
                 if (valuesByKey == null) {
                     throw new Error(`Missing index '${index}'`);
@@ -280,7 +292,9 @@ class FileDb extends skytree_1.Actor {
         });
     }
     async toCollections() {
-        const keysByCollection = await asyncGivenObservable_1.asyncGivenObservable(this._keysByCollection);
+        const keysByCollection = await asyncGivenObservable_1.asyncGivenObservable({
+            observable: this._keysByCollection,
+        });
         return Array.from(keysByCollection.keys());
     }
     async toKeys(options = {}) {

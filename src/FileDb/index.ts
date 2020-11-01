@@ -142,7 +142,9 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
   }
 
   async toCollections(): Promise<string[]> {
-    const keysByCollection = await asyncGivenObservable(this._keysByCollection);
+    const keysByCollection = await asyncGivenObservable({
+      observable: this._keysByCollection,
+    });
     return Array.from(keysByCollection.keys());
   }
 
@@ -281,10 +283,12 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     const changedCollections = new Set<string>();
     const changedIndexes = new Set<string>();
 
-    const keysByCollection = await asyncGivenObservable(this._keysByCollection);
-    const valuesByKeyByIndex = await asyncGivenObservable(
-      this._valuesByKeyByIndex
-    );
+    const keysByCollection = await asyncGivenObservable({
+      observable: this._keysByCollection,
+    });
+    const valuesByKeyByIndex = await asyncGivenObservable({
+      observable: this._valuesByKeyByIndex,
+    });
 
     existingRow.collections.forEach((collectionKey) => {
       const rowKeysOfThisCollection = keysByCollection.get(collectionKey);
@@ -431,10 +435,12 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     const changedCollections = new Set<string>();
     const changedIndexes = new Set<string>();
 
-    const keysByCollection = await asyncGivenObservable(this._keysByCollection);
-    const valuesByKeyByIndex = await asyncGivenObservable(
-      this._valuesByKeyByIndex
-    );
+    const keysByCollection = await asyncGivenObservable({
+      observable: this._keysByCollection,
+    });
+    const valuesByKeyByIndex = await asyncGivenObservable({
+      observable: this._valuesByKeyByIndex,
+    });
     row.collections.forEach((collection) => {
       if (!keysByCollection.has(collection)) {
         keysByCollection.set(collection, new Set());
@@ -507,11 +513,11 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     let result: string[];
 
     if (options.filter == null || options.filter.length === 0) {
-      result = await asyncGivenObservable(this._allKeys);
+      result = await asyncGivenObservable({ observable: this._allKeys });
     } else {
-      const keysByCollection = await asyncGivenObservable(
-        this._keysByCollection
-      );
+      const keysByCollection = await asyncGivenObservable({
+        observable: this._keysByCollection,
+      });
       const sets = options.filter.map((collection) => {
         return keysByCollection.get(collection) || new Set<string>();
       });
@@ -521,9 +527,9 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
 
     const index = options.orderBy;
     if (index != null) {
-      const valuesByKeyByIndex = await asyncGivenObservable(
-        this._valuesByKeyByIndex
-      );
+      const valuesByKeyByIndex = await asyncGivenObservable({
+        observable: this._valuesByKeyByIndex,
+      });
       const valuesByKey = valuesByKeyByIndex.get(index);
       if (valuesByKey == null) {
         throw new Error(`Missing index '${index}'`);

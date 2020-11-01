@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.asyncGivenObservable = void 0;
-function asyncGivenObservable(observable, filter) {
+function asyncGivenObservable({ observable, filter, }) {
     if (observable.value != null) {
         return Promise.resolve(observable.value);
     }
