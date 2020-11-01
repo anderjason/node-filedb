@@ -1,3 +1,4 @@
+import { UnsaltedHash } from "@anderjason/node-crypto";
 import { LocalDirectory, LocalFile } from "@anderjason/node-filesystem";
 import { PromiseUtil } from "@anderjason/util";
 import { Actor } from "skytree";
@@ -65,11 +66,14 @@ export class LocalFileAdapter<T>
   }
 
   private fileGivenKey(key: string): LocalFile {
+    const hash = UnsaltedHash.givenUnhashedString(key)
+      .toHashedString()
+      .slice(0, 24);
+
     return LocalFile.givenRelativePath(
       this.props.directory,
-      "data",
-      key.slice(0, 3),
-      `${key}.json`
+      hash.slice(0, 3),
+      `${hash}.json`
     );
   }
 }
