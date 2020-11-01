@@ -9,23 +9,7 @@ import { updateKeysByCollection } from "./_internal/updateKeysByCollection";
 import { updateValuesByKeyByIndex } from "./_internal/updateValuesByKeyByIndex";
 import { FileDbAdapters, PortableRow } from "../FileDbAdapters";
 import { Observable, ReadOnlyObservable } from "@anderjason/observable";
-
-function asyncGivenObservable<T>(observable: Observable<T>): Promise<T> {
-  if (observable.value != null) {
-    return Promise.resolve(observable.value);
-  }
-
-  return new Promise((resolve) => {
-    const receipt = observable.didChange.subscribe((value) => {
-      if (value == null) {
-        return;
-      }
-
-      receipt.cancel();
-      resolve(value);
-    });
-  });
-}
+import { asyncGivenObservable } from "../asyncGivenObservable";
 
 export interface FileDbRow<T> {
   key: string;

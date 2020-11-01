@@ -11,20 +11,7 @@ const valuesByKeyByIndexGivenFileDbDirectory_1 = require("./_internal/valuesByKe
 const updateKeysByCollection_1 = require("./_internal/updateKeysByCollection");
 const updateValuesByKeyByIndex_1 = require("./_internal/updateValuesByKeyByIndex");
 const observable_1 = require("@anderjason/observable");
-function asyncGivenObservable(observable) {
-    if (observable.value != null) {
-        return Promise.resolve(observable.value);
-    }
-    return new Promise((resolve) => {
-        const receipt = observable.didChange.subscribe((value) => {
-            if (value == null) {
-                return;
-            }
-            receipt.cancel();
-            resolve(value);
-        });
-    });
-}
+const asyncGivenObservable_1 = require("../asyncGivenObservable");
 class FileDb extends skytree_1.Actor {
     constructor(props) {
         super(props);
@@ -45,8 +32,8 @@ class FileDb extends skytree_1.Actor {
             }
             const changedCollections = new Set();
             const changedIndexes = new Set();
-            const keysByCollection = await asyncGivenObservable(this._keysByCollection);
-            const valuesByKeyByIndex = await asyncGivenObservable(this._valuesByKeyByIndex);
+            const keysByCollection = await asyncGivenObservable_1.asyncGivenObservable(this._keysByCollection);
+            const valuesByKeyByIndex = await asyncGivenObservable_1.asyncGivenObservable(this._valuesByKeyByIndex);
             existingRow.collections.forEach((collectionKey) => {
                 const rowKeysOfThisCollection = keysByCollection.get(collectionKey);
                 if (rowKeysOfThisCollection != null) {
@@ -143,8 +130,8 @@ class FileDb extends skytree_1.Actor {
             serializable.valuesByIndex = obj;
             const changedCollections = new Set();
             const changedIndexes = new Set();
-            const keysByCollection = await asyncGivenObservable(this._keysByCollection);
-            const valuesByKeyByIndex = await asyncGivenObservable(this._valuesByKeyByIndex);
+            const keysByCollection = await asyncGivenObservable_1.asyncGivenObservable(this._keysByCollection);
+            const valuesByKeyByIndex = await asyncGivenObservable_1.asyncGivenObservable(this._valuesByKeyByIndex);
             row.collections.forEach((collection) => {
                 if (!keysByCollection.has(collection)) {
                     keysByCollection.set(collection, new Set());
@@ -193,10 +180,10 @@ class FileDb extends skytree_1.Actor {
         this._listKeys = async (options = {}) => {
             let result;
             if (options.filter == null || options.filter.length === 0) {
-                result = await asyncGivenObservable(this._allKeys);
+                result = await asyncGivenObservable_1.asyncGivenObservable(this._allKeys);
             }
             else {
-                const keysByCollection = await asyncGivenObservable(this._keysByCollection);
+                const keysByCollection = await asyncGivenObservable_1.asyncGivenObservable(this._keysByCollection);
                 const sets = options.filter.map((collection) => {
                     return keysByCollection.get(collection) || new Set();
                 });
@@ -204,7 +191,7 @@ class FileDb extends skytree_1.Actor {
             }
             const index = options.orderBy;
             if (index != null) {
-                const valuesByKeyByIndex = await asyncGivenObservable(this._valuesByKeyByIndex);
+                const valuesByKeyByIndex = await asyncGivenObservable_1.asyncGivenObservable(this._valuesByKeyByIndex);
                 const valuesByKey = valuesByKeyByIndex.get(index);
                 if (valuesByKey == null) {
                     throw new Error(`Missing index '${index}'`);
@@ -293,7 +280,7 @@ class FileDb extends skytree_1.Actor {
         });
     }
     async toCollections() {
-        const keysByCollection = await asyncGivenObservable(this._keysByCollection);
+        const keysByCollection = await asyncGivenObservable_1.asyncGivenObservable(this._keysByCollection);
         return Array.from(keysByCollection.keys());
     }
     async toKeys(options = {}) {
