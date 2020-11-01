@@ -1,3 +1,4 @@
+import { UnsaltedHash } from "@anderjason/node-crypto";
 import { FileDbAdapter, PortableCollection } from "../../FileDbAdapters";
 
 export async function updateKeysByCollection(
@@ -5,14 +6,18 @@ export async function updateKeysByCollection(
   collectionKey: string,
   keys?: Set<string>
 ): Promise<void> {
+  const hash = UnsaltedHash.givenUnhashedString(collectionKey)
+    .toHashedString()
+    .slice(0, 24);
+
   if (keys != null && keys.size > 0) {
     const contents = {
       collection: collectionKey,
       keys: Array.from(keys),
     };
 
-    await adapter.setValue(collectionKey, contents);
+    await adapter.setValue(hash, contents);
   } else {
-    await adapter.deleteKey(collectionKey);
+    await adapter.deleteKey(hash);
   }
 }

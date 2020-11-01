@@ -18,18 +18,26 @@ export class LocalFileAdapter<T>
 
     const files = await this.props.directory.toDescendantFiles();
 
-    const result = files.map((file) => file.toFilenameWithoutExtension());
+    const result = files
+      .filter((file) => file.hasExtension([".json"]))
+      .map((file) => file.toFilenameWithoutExtension());
+
     return result;
   }
 
   async toValues(): Promise<T[]> {
-    const keys = await this.toKeys();
+    await this.props.directory.createDirectory();
+
+    let files = await this.props.directory.toDescendantFiles();
+    files = files.filter((file) => {
+      return file.hasExtension([".json"]);
+    });
 
     const result = await PromiseUtil.asyncValuesGivenArrayAndConverter(
-      keys,
-      async (key) => {
-        const value = await this.toOptionalValue(key);
-        return value;
+      files,
+      async (file) => {
+        const buffer = await file.toContentBuffer();
+        return this.props.valueGivenBuffer(buffer);
       }
     );
 
