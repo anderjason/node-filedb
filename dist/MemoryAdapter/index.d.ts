@@ -1,5 +1,6 @@
-import { FileDbAdapter } from "../FileDb/FileDbAdapter";
-export declare class MemoryAdapter<T> implements FileDbAdapter<T> {
+import { Actor } from "skytree";
+import { FileDbAdapter } from "../FileDbAdapters";
+export declare class MemoryAdapter<T> extends Actor<void> implements FileDbAdapter<T> {
     private _data;
     toKeys(): Promise<string[]>;
     toValues(): Promise<T[]>;

@@ -33,7 +33,6 @@ class FileDb extends skytree_1.Actor {
                 throw new Error("Key length must be at least 5 characters");
             }
             this._rowCache.remove(rowKey);
-            const file = await this.props.adapters.dataAdapter.toOptionalValue(rowKey);
             const existingRow = await this.toOptionalRowGivenKey(rowKey);
             if (existingRow == null) {
                 return;
@@ -55,12 +54,12 @@ class FileDb extends skytree_1.Actor {
                 }
             }
             await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(Array.from(changedCollections), async (collectionKey) => {
-                await updateKeysByCollection_1.updateKeysByCollection(this.props.adapters.collectionsAdapter, collectionKey, this._keysByCollection.get(collectionKey));
+                await updateKeysByCollection_1.updateKeysByCollection(this.props.adapters.props.collectionsAdapter, collectionKey, this._keysByCollection.get(collectionKey));
             });
             await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(Array.from(changedIndexes), async (indexKey) => {
-                await updateValuesByKeyByIndex_1.updateValuesByKeyByIndex(this.props.adapters.indexesAdapter, indexKey, this._valuesByKeyByIndex.get(indexKey));
+                await updateValuesByKeyByIndex_1.updateValuesByKeyByIndex(this.props.adapters.props.indexesAdapter, indexKey, this._valuesByKeyByIndex.get(indexKey));
             });
-            await this.props.adapters.dataAdapter.deleteKey(rowKey);
+            await this.props.adapters.props.dataAdapter.deleteKey(rowKey);
         };
         this._read = async (key) => {
             if (key == null) {
@@ -73,7 +72,10 @@ class FileDb extends skytree_1.Actor {
             if (cachedRow != null) {
                 return cachedRow;
             }
-            const serializable = await this.props.adapters.dataAdapter.toOptionalValue(key);
+            let serializable = await this.props.adapters.props.dataAdapter.toOptionalValue(key);
+            if (serializable == null) {
+                return undefined;
+            }
             const valuesByIndex = new Map(Object.entries(serializable.valuesByIndex || {}));
             const result = {
                 key: serializable.key,
@@ -94,8 +96,8 @@ class FileDb extends skytree_1.Actor {
                 throw new Error("Key length must be at least 5 characters");
             }
             let row = await this._read(key);
-            const collections = this._collectionsGivenData(data);
-            const valuesByIndex = this._valuesByIndexGivenData(data);
+            const collections = this.props.collectionsGivenData(data);
+            const valuesByIndex = this.props.valuesByIndexGivenData(data);
             if (row == null) {
                 row = {
                     key,
@@ -113,7 +115,6 @@ class FileDb extends skytree_1.Actor {
                 row.data = data;
             }
             this._rowCache.put(key, row);
-            const file = await this.props.adapters.dataAdapter.toOptionalValue(key);
             const serializable = {
                 key: row.key,
                 createdAtMs: row.createdAt.toEpochMilliseconds(),
@@ -171,12 +172,12 @@ class FileDb extends skytree_1.Actor {
                 }
             }
             await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(Array.from(changedCollections), async (collectionKey) => {
-                await updateKeysByCollection_1.updateKeysByCollection(this.props.adapters.collectionsAdapter, collectionKey, this._keysByCollection.get(collectionKey));
+                await updateKeysByCollection_1.updateKeysByCollection(this.props.adapters.props.collectionsAdapter, collectionKey, this._keysByCollection.get(collectionKey));
             });
             await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(Array.from(changedIndexes), async (indexKey) => {
-                await updateValuesByKeyByIndex_1.updateValuesByKeyByIndex(this.props.adapters.indexesAdapter, indexKey, this._valuesByKeyByIndex.get(indexKey));
+                await updateValuesByKeyByIndex_1.updateValuesByKeyByIndex(this.props.adapters.props.indexesAdapter, indexKey, this._valuesByKeyByIndex.get(indexKey));
             });
-            await this.props.adapters.dataAdapter.setValue(key, serializable);
+            await this.props.adapters.props.dataAdapter.setValue(key, serializable);
             return row;
         };
         this._listKeys = async (options = {}) => {
@@ -260,13 +261,14 @@ class FileDb extends skytree_1.Actor {
         this._rowCache = new LRUCache_1.LRUCache(props.cacheSize || 10);
     }
     onActivate() {
-        this.props.adapters.dataAdapter.toKeys().then((keys) => {
+        this.addActor(this.props.adapters);
+        this.props.adapters.props.dataAdapter.toKeys().then((keys) => {
             this._allKeys = keys;
         });
-        keysByCollectionGivenAdapter_1.keysByCollectionGivenAdapter(this.props.adapters.collectionsAdapter).then((result) => {
+        keysByCollectionGivenAdapter_1.keysByCollectionGivenAdapter(this.props.adapters.props.collectionsAdapter).then((result) => {
             this._keysByCollection = result;
         });
-        valuesByKeyByIndexGivenFileDbDirectory_1.valuesByKeyByIndexGivenAdapter(this.props.adapters.indexesAdapter).then((result) => {
+        valuesByKeyByIndexGivenFileDbDirectory_1.valuesByKeyByIndexGivenAdapter(this.props.adapters.props.indexesAdapter).then((result) => {
             this._valuesByKeyByIndex = result;
         });
     }

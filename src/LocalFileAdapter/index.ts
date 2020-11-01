@@ -1,7 +1,7 @@
 import { LocalDirectory, LocalFile } from "@anderjason/node-filesystem";
 import { PromiseUtil } from "@anderjason/util";
 import { Actor } from "skytree";
-import { FileDbAdapter } from "../FileDb/FileDbAdapter";
+import { FileDbAdapter } from "../FileDbAdapters";
 
 export interface LocalFileAdapterProps<T> {
   directory: LocalDirectory;

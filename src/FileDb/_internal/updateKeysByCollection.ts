@@ -1,4 +1,4 @@
-import { FileDbAdapter, PortableCollection } from "../FileDbAdapter";
+import { FileDbAdapter, PortableCollection } from "../../FileDbAdapters";
 
 export async function updateKeysByCollection(
   adapter: FileDbAdapter<PortableCollection>,

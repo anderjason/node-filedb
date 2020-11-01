@@ -1,4 +1,4 @@
-import { FileDbAdapter, PortableIndex } from "../FileDbAdapter";
+import { FileDbAdapter, PortableIndex } from "../../FileDbAdapters";
 export async function updateValuesByKeyByIndex(
   adapter: FileDbAdapter<PortableIndex>,
   indexKey: string,

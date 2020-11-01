@@ -1,7 +1,7 @@
 import { Actor } from "skytree";
 import { LocalDirectory } from "@anderjason/node-filesystem";
 import { Instant } from "@anderjason/time";
-import { FileDbAdapter } from "./FileDbAdapter";
+import { FileDbAdapters } from "../FileDbAdapters";
 export interface FileDbRow<T> {
     key: string;
     createdAt: Instant;
@@ -9,16 +9,6 @@ export interface FileDbRow<T> {
     data: T;
     collections: Set<string>;
     valuesByIndex: Map<string, number>;
-}
-interface PortableRow {
-    key: string;
-    createdAtMs: number;
-    updatedAtMs: number;
-    data: any;
-    collections?: string[];
-    valuesByIndex?: {
-        [index: string]: number;
-    };
 }
 export interface SerializableFileDbCollection {
     collection: string;
@@ -36,21 +26,6 @@ export interface FileDbReadOptions {
     limit?: number;
     offset?: number;
 }
-export interface PortableCollection {
-    collection: string;
-    keys: string[];
-}
-export interface PortableIndex {
-    index: string;
-    valuesByKey: {
-        [key: string]: number;
-    };
-}
-export interface FileDbAdapters {
-    collectionsAdapter: FileDbAdapter<PortableCollection>;
-    dataAdapter: FileDbAdapter<PortableRow>;
-    indexesAdapter: FileDbAdapter<PortableIndex>;
-}
 export interface FileDbProps<T> {
     label: string;
     adapters: FileDbAdapters;
@@ -61,8 +36,6 @@ export interface FileDbProps<T> {
 export declare class FileDb<T> extends Actor<FileDbProps<T>> {
     readonly directory: LocalDirectory;
     readonly label: string;
-    private _collectionsGivenData;
-    private _valuesByIndexGivenData;
     private _rowCache;
     private _keysByCollection;
     private _valuesByKeyByIndex;
@@ -87,4 +60,3 @@ export declare class FileDb<T> extends Actor<FileDbProps<T>> {
     private _listRows;
     private _nextInstruction;
 }
-export {};

@@ -8,7 +8,7 @@ import { keysByCollectionGivenAdapter } from "./_internal/keysByCollectionGivenA
 import { valuesByKeyByIndexGivenAdapter } from "./_internal/valuesByKeyByIndexGivenFileDbDirectory";
 import { updateKeysByCollection } from "./_internal/updateKeysByCollection";
 import { updateValuesByKeyByIndex } from "./_internal/updateValuesByKeyByIndex";
-import { FileDbAdapters, PortableRow } from "./FileDbAdapter";
+import { FileDbAdapters, PortableRow } from "../FileDbAdapters";
 
 export interface FileDbRow<T> {
   key: string;

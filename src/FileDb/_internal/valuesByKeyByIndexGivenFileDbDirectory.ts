@@ -1,4 +1,4 @@
-import { FileDbAdapter } from "../FileDbAdapter";
+import { FileDbAdapter } from "../../FileDbAdapters";
 
 export async function valuesByKeyByIndexGivenAdapter(
   adapter: FileDbAdapter<any>

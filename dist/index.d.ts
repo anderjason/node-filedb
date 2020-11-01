@@ -1,2 +1,5 @@
 import { FileDb } from "./FileDb";
-export { FileDb };
+import { FileDbAdapters } from "./FileDbAdapters";
+import { LocalFileAdapter } from "./LocalFileAdapter";
+import { MemoryAdapter } from "./MemoryAdapter";
+export { FileDb, FileDbAdapters, LocalFileAdapter, MemoryAdapter };

@@ -1,6 +1,6 @@
 import { Test } from "@anderjason/tests";
 import { FileDb } from ".";
-import { FileDbAdapters } from "./FileDbAdapter";
+import { FileDbAdapters } from "../FileDbAdapters";
 
 Test.define("FileDb can be created", () => {
   const fileDb = new FileDb({

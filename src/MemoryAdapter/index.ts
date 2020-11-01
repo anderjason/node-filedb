@@ -1,5 +1,5 @@
 import { Actor } from "skytree";
-import { FileDbAdapter } from "../FileDb/FileDbAdapter";
+import { FileDbAdapter } from "../FileDbAdapters";
 
 export class MemoryAdapter<T> extends Actor<void> implements FileDbAdapter<T> {
   private _data = new Map<string, T>();
