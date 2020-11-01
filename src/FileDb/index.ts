@@ -1,14 +1,14 @@
-import { EncryptedData, SecretKey, UniqueId } from "@anderjason/node-crypto";
+import { UniqueId } from "@anderjason/node-crypto";
+import { Actor } from "skytree";
 import { LocalDirectory } from "@anderjason/node-filesystem";
 import { Instant } from "@anderjason/time";
 import { ArrayUtil, PromiseUtil, SetUtil } from "@anderjason/util";
-import { LRUCache } from "./LRUCache";
-import { keysByCollectionGivenFileDbDirectory } from "./_internal/keysByCollectionGivenFileDbDirectory";
-import { localFileGivenFileDbKey } from "./_internal/localFileGivenFileDbKey";
-import { promiseOfUpdatedFileDbCollection } from "./_internal/promiseOfUpdatedFileDbCollection";
-import { promiseOfUpdatedFileDbIndex } from "./_internal/promiseOfUpdatedFileDbIndex";
-import { rowKeysGivenFileDbDirectory } from "./_internal/rowKeysGivenFileDbDirectory";
-import { valuesByKeyByIndexGivenFileDbDirectory } from "./_internal/valuesByKeyByIndexGivenFileDbDirectory";
+import { LRUCache } from "../LRUCache";
+import { keysByCollectionGivenAdapter } from "./_internal/keysByCollectionGivenAdapter";
+import { valuesByKeyByIndexGivenAdapter } from "./_internal/valuesByKeyByIndexGivenFileDbDirectory";
+import { updateKeysByCollection } from "./_internal/updateKeysByCollection";
+import { updateValuesByKeyByIndex } from "./_internal/updateValuesByKeyByIndex";
+import { FileDbAdapters, PortableRow } from "./FileDbAdapter";
 
 export interface FileDbRow<T> {
   key: string;
@@ -17,18 +17,6 @@ export interface FileDbRow<T> {
   data: T;
   collections: Set<string>;
   valuesByIndex: Map<string, number>;
-}
-
-interface SerializableFileDbRow {
-  key: string;
-  createdAtMs: number;
-  updatedAtMs: number;
-  data: any;
-
-  collections?: string[];
-  valuesByIndex?: {
-    [index: string]: number;
-  };
 }
 
 export interface SerializableFileDbCollection {
@@ -94,59 +82,50 @@ type FileDbInstruction<T> =
   | FileDbListKeysInstruction
   | FileDbListRowsInstruction<T>;
 
-export interface FileDbDefinition<T> {
+export interface FileDbProps<T> {
   label: string;
-  directory: LocalDirectory;
+  adapters: FileDbAdapters;
+
   collectionsGivenData: (data: T) => Set<string>;
   valuesByIndexGivenData: (data: T) => Map<string, number>;
 
-  encryptionKey?: SecretKey;
   cacheSize?: number;
 }
 
-export class FileDb<T> {
-  static async ofDefinition<T>(
-    definition: FileDbDefinition<T>
-  ): Promise<FileDb<T>> {
-    const result = new FileDb<T>(definition);
-    await result.init();
-
-    return result;
-  }
-
+export class FileDb<T> extends Actor<FileDbProps<T>> {
   readonly directory: LocalDirectory;
   readonly label: string;
 
-  private _collectionsGivenData: (data: T) => Set<string>;
-  private _valuesByIndexGivenData: (data: T) => Map<string, number>;
   private _rowCache: LRUCache<FileDbRow<T>>;
   private _keysByCollection: Map<string, Set<string>>;
   private _valuesByKeyByIndex: Map<string, Map<string, number>>;
-  private _encryptionKey?: SecretKey;
   private _allKeys: string[];
   private _instructions: FileDbInstruction<T>[] = [];
 
-  private constructor(definition: FileDbDefinition<T>) {
-    this.label = definition.label;
-    this.directory = definition.directory;
-    this._encryptionKey = definition.encryptionKey;
-    this._rowCache = new LRUCache<FileDbRow<T>>(definition.cacheSize || 10);
-    this._collectionsGivenData = definition.collectionsGivenData;
-    this._valuesByIndexGivenData = definition.valuesByIndexGivenData;
+  constructor(props: FileDbProps<T>) {
+    super(props);
+
+    this._rowCache = new LRUCache<FileDbRow<T>>(props.cacheSize || 10);
   }
 
-  async init(): Promise<void> {
-    this._allKeys = await rowKeysGivenFileDbDirectory(this.directory);
+  onActivate(): void {
+    this.addActor(this.props.adapters);
 
-    this._keysByCollection = await keysByCollectionGivenFileDbDirectory(
-      this.directory,
-      this._encryptionKey
-    );
+    this.props.adapters.props.dataAdapter.toKeys().then((keys) => {
+      this._allKeys = keys;
+    });
 
-    this._valuesByKeyByIndex = await valuesByKeyByIndexGivenFileDbDirectory(
-      this.directory,
-      this._encryptionKey
-    );
+    keysByCollectionGivenAdapter(
+      this.props.adapters.props.collectionsAdapter
+    ).then((result) => {
+      this._keysByCollection = result;
+    });
+
+    valuesByKeyByIndexGivenAdapter(
+      this.props.adapters.props.indexesAdapter
+    ).then((result) => {
+      this._valuesByKeyByIndex = result;
+    });
   }
 
   toCollections(): string[] {
@@ -280,8 +259,6 @@ export class FileDb<T> {
 
     this._rowCache.remove(rowKey);
 
-    const file = localFileGivenFileDbKey(this.directory, rowKey);
-
     const existingRow = await this.toOptionalRowGivenKey(rowKey);
     if (existingRow == null) {
       return;
@@ -311,11 +288,10 @@ export class FileDb<T> {
     await PromiseUtil.asyncSequenceGivenArrayAndCallback(
       Array.from(changedCollections),
       async (collectionKey) => {
-        await promiseOfUpdatedFileDbCollection(
-          this.directory,
+        await updateKeysByCollection(
+          this.props.adapters.props.collectionsAdapter,
           collectionKey,
-          this._keysByCollection.get(collectionKey),
-          this._encryptionKey
+          this._keysByCollection.get(collectionKey)
         );
       }
     );
@@ -323,16 +299,15 @@ export class FileDb<T> {
     await PromiseUtil.asyncSequenceGivenArrayAndCallback(
       Array.from(changedIndexes),
       async (indexKey) => {
-        await promiseOfUpdatedFileDbIndex(
-          this.directory,
+        await updateValuesByKeyByIndex(
+          this.props.adapters.props.indexesAdapter,
           indexKey,
-          this._valuesByKeyByIndex.get(indexKey),
-          this._encryptionKey
+          this._valuesByKeyByIndex.get(indexKey)
         );
       }
     );
 
-    await file.deleteFile();
+    await this.props.adapters.props.dataAdapter.deleteKey(rowKey);
   };
 
   private _read = async (key: string): Promise<FileDbRow<T> | undefined> => {
@@ -349,25 +324,13 @@ export class FileDb<T> {
       return cachedRow;
     }
 
-    const file = localFileGivenFileDbKey(this.directory, key);
+    let serializable = await this.props.adapters.props.dataAdapter.toOptionalValue(
+      key
+    );
 
-    const isAccessible = await file.isAccessible();
-    if (!isAccessible) {
+    if (serializable == null) {
       return undefined;
     }
-
-    const rawFileContents = await file.toContentString();
-    let contents: string;
-
-    if (this._encryptionKey != null) {
-      contents = EncryptedData.givenEncryptedHexString(
-        rawFileContents
-      ).toDecryptedString(this._encryptionKey);
-    } else {
-      contents = rawFileContents;
-    }
-
-    const serializable = JSON.parse(contents) as SerializableFileDbRow;
 
     const valuesByIndex = new Map<string, number>(
       Object.entries(serializable.valuesByIndex || {})
@@ -402,8 +365,8 @@ export class FileDb<T> {
 
     let row: FileDbRow<T> | undefined = await this._read(key);
 
-    const collections = this._collectionsGivenData(data);
-    const valuesByIndex = this._valuesByIndexGivenData(data);
+    const collections = this.props.collectionsGivenData(data);
+    const valuesByIndex = this.props.valuesByIndexGivenData(data);
 
     if (row == null) {
       row = {
@@ -423,9 +386,7 @@ export class FileDb<T> {
 
     this._rowCache.put(key, row);
 
-    const file = localFileGivenFileDbKey(this.directory, key);
-
-    const serializable: SerializableFileDbRow = {
+    const serializable: PortableRow = {
       key: row.key,
       createdAtMs: row.createdAt.toEpochMilliseconds(),
       updatedAtMs: row.updatedAt.toEpochMilliseconds(),
@@ -493,11 +454,10 @@ export class FileDb<T> {
     await PromiseUtil.asyncSequenceGivenArrayAndCallback(
       Array.from(changedCollections),
       async (collectionKey) => {
-        await promiseOfUpdatedFileDbCollection(
-          this.directory,
+        await updateKeysByCollection(
+          this.props.adapters.props.collectionsAdapter,
           collectionKey,
-          this._keysByCollection.get(collectionKey),
-          this._encryptionKey
+          this._keysByCollection.get(collectionKey)
         );
       }
     );
@@ -505,28 +465,15 @@ export class FileDb<T> {
     await PromiseUtil.asyncSequenceGivenArrayAndCallback(
       Array.from(changedIndexes),
       async (indexKey) => {
-        await promiseOfUpdatedFileDbIndex(
-          this.directory,
+        await updateValuesByKeyByIndex(
+          this.props.adapters.props.indexesAdapter,
           indexKey,
-          this._valuesByKeyByIndex.get(indexKey),
-          this._encryptionKey
+          this._valuesByKeyByIndex.get(indexKey)
         );
       }
     );
 
-    const contents = JSON.stringify(serializable, null, 2);
-
-    let rawFileContents: string;
-    if (this._encryptionKey != null) {
-      rawFileContents = EncryptedData.givenDecryptedStringAndKey(
-        contents,
-        this._encryptionKey
-      ).toEncryptedHexString();
-    } else {
-      rawFileContents = contents;
-    }
-
-    await file.writeFile(rawFileContents);
+    await this.props.adapters.props.dataAdapter.setValue(key, serializable);
 
     return row;
   };

@@ -1,6 +1,7 @@
-import { SecretKey } from "@anderjason/node-crypto";
+import { Actor } from "skytree";
 import { LocalDirectory } from "@anderjason/node-filesystem";
 import { Instant } from "@anderjason/time";
+import { FileDbAdapter } from "./FileDbAdapter";
 export interface FileDbRow<T> {
     key: string;
     createdAt: Instant;
@@ -8,6 +9,16 @@ export interface FileDbRow<T> {
     data: T;
     collections: Set<string>;
     valuesByIndex: Map<string, number>;
+}
+interface PortableRow {
+    key: string;
+    createdAtMs: number;
+    updatedAtMs: number;
+    data: any;
+    collections?: string[];
+    valuesByIndex?: {
+        [index: string]: number;
+    };
 }
 export interface SerializableFileDbCollection {
     collection: string;
@@ -25,16 +36,29 @@ export interface FileDbReadOptions {
     limit?: number;
     offset?: number;
 }
-export interface FileDbDefinition<T> {
+export interface PortableCollection {
+    collection: string;
+    keys: string[];
+}
+export interface PortableIndex {
+    index: string;
+    valuesByKey: {
+        [key: string]: number;
+    };
+}
+export interface FileDbAdapters {
+    collectionsAdapter: FileDbAdapter<PortableCollection>;
+    dataAdapter: FileDbAdapter<PortableRow>;
+    indexesAdapter: FileDbAdapter<PortableIndex>;
+}
+export interface FileDbProps<T> {
     label: string;
-    directory: LocalDirectory;
+    adapters: FileDbAdapters;
     collectionsGivenData: (data: T) => Set<string>;
     valuesByIndexGivenData: (data: T) => Map<string, number>;
-    encryptionKey?: SecretKey;
     cacheSize?: number;
 }
-export declare class FileDb<T> {
-    static ofDefinition<T>(definition: FileDbDefinition<T>): Promise<FileDb<T>>;
+export declare class FileDb<T> extends Actor<FileDbProps<T>> {
     readonly directory: LocalDirectory;
     readonly label: string;
     private _collectionsGivenData;
@@ -42,11 +66,10 @@ export declare class FileDb<T> {
     private _rowCache;
     private _keysByCollection;
     private _valuesByKeyByIndex;
-    private _encryptionKey?;
     private _allKeys;
     private _instructions;
-    private constructor();
-    init(): Promise<void>;
+    constructor(props: FileDbProps<T>);
+    onActivate(): void;
     toCollections(): string[];
     toKeys(options?: FileDbReadOptions): Promise<string[]>;
     hasKey(key: string): Promise<boolean>;
@@ -64,3 +87,4 @@ export declare class FileDb<T> {
     private _listRows;
     private _nextInstruction;
 }
+export {};

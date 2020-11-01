@@ -1,51 +1,19 @@
-import { LocalDirectory } from "@anderjason/node-filesystem";
-import { SecretKey } from "@anderjason/node-crypto";
-import { PromiseUtil } from "@anderjason/util";
-import { SerializableFileDbIndex } from "..";
-import { EncryptedData } from "@anderjason/node-crypto";
+import { FileDbAdapter } from "../FileDbAdapter";
 
-export async function valuesByKeyByIndexGivenFileDbDirectory(
-  directory: LocalDirectory,
-  encryptionKey?: SecretKey
+export async function valuesByKeyByIndexGivenAdapter(
+  adapter: FileDbAdapter<any>
 ): Promise<Map<string, Map<string, number>>> {
   const result = new Map<string, Map<string, number>>();
 
-  const indexesDirectory = LocalDirectory.givenRelativePath(
-    directory,
-    "indexes"
-  );
+  const indexes = await adapter.toValues();
 
-  await indexesDirectory.createDirectory();
-  const indexFiles = await indexesDirectory.toDescendantFiles();
+  indexes.forEach((index) => {
+    const valuesByKey = new Map<string, number>(
+      Object.entries(index.valuesByKey)
+    );
 
-  await PromiseUtil.asyncSequenceGivenArrayAndCallback(
-    indexFiles,
-    async (indexFile) => {
-      if (indexFile.toExtension() !== ".json") {
-        return;
-      }
-
-      const rawFileContents = await indexFile.toContentString();
-
-      let contents: SerializableFileDbIndex;
-
-      if (encryptionKey != null) {
-        contents = JSON.parse(
-          EncryptedData.givenEncryptedHexString(
-            rawFileContents
-          ).toDecryptedString(encryptionKey)
-        );
-      } else {
-        contents = JSON.parse(rawFileContents);
-      }
-
-      const valuesByKey = new Map<string, number>(
-        Object.entries(contents.valuesByKey)
-      );
-
-      result.set(contents.index, valuesByKey);
-    }
-  );
+    result.set(index.index, valuesByKey);
+  });
 
   return result;
 }

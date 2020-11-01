@@ -2,17 +2,17 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FileDb = void 0;
 const node_crypto_1 = require("@anderjason/node-crypto");
+const skytree_1 = require("skytree");
 const time_1 = require("@anderjason/time");
 const util_1 = require("@anderjason/util");
-const LRUCache_1 = require("./LRUCache");
-const keysByCollectionGivenFileDbDirectory_1 = require("./_internal/keysByCollectionGivenFileDbDirectory");
-const localFileGivenFileDbKey_1 = require("./_internal/localFileGivenFileDbKey");
-const promiseOfUpdatedFileDbCollection_1 = require("./_internal/promiseOfUpdatedFileDbCollection");
-const promiseOfUpdatedFileDbIndex_1 = require("./_internal/promiseOfUpdatedFileDbIndex");
-const rowKeysGivenFileDbDirectory_1 = require("./_internal/rowKeysGivenFileDbDirectory");
+const LRUCache_1 = require("../LRUCache");
+const keysByCollectionGivenAdapter_1 = require("./_internal/keysByCollectionGivenAdapter");
 const valuesByKeyByIndexGivenFileDbDirectory_1 = require("./_internal/valuesByKeyByIndexGivenFileDbDirectory");
-class FileDb {
-    constructor(definition) {
+const updateKeysByCollection_1 = require("./_internal/updateKeysByCollection");
+const updateValuesByKeyByIndex_1 = require("./_internal/updateValuesByKeyByIndex");
+class FileDb extends skytree_1.Actor {
+    constructor(props) {
+        super(props);
         this._instructions = [];
         this.toDeletePromise = (key) => {
             return new Promise((resolve, reject) => {
@@ -33,7 +33,7 @@ class FileDb {
                 throw new Error("Key length must be at least 5 characters");
             }
             this._rowCache.remove(rowKey);
-            const file = localFileGivenFileDbKey_1.localFileGivenFileDbKey(this.directory, rowKey);
+            const file = await this.props.adapters.dataAdapter.toOptionalValue(rowKey);
             const existingRow = await this.toOptionalRowGivenKey(rowKey);
             if (existingRow == null) {
                 return;
@@ -55,12 +55,12 @@ class FileDb {
                 }
             }
             await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(Array.from(changedCollections), async (collectionKey) => {
-                await promiseOfUpdatedFileDbCollection_1.promiseOfUpdatedFileDbCollection(this.directory, collectionKey, this._keysByCollection.get(collectionKey), this._encryptionKey);
+                await updateKeysByCollection_1.updateKeysByCollection(this.props.adapters.collectionsAdapter, collectionKey, this._keysByCollection.get(collectionKey));
             });
             await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(Array.from(changedIndexes), async (indexKey) => {
-                await promiseOfUpdatedFileDbIndex_1.promiseOfUpdatedFileDbIndex(this.directory, indexKey, this._valuesByKeyByIndex.get(indexKey), this._encryptionKey);
+                await updateValuesByKeyByIndex_1.updateValuesByKeyByIndex(this.props.adapters.indexesAdapter, indexKey, this._valuesByKeyByIndex.get(indexKey));
             });
-            await file.deleteFile();
+            await this.props.adapters.dataAdapter.deleteKey(rowKey);
         };
         this._read = async (key) => {
             if (key == null) {
@@ -73,20 +73,7 @@ class FileDb {
             if (cachedRow != null) {
                 return cachedRow;
             }
-            const file = localFileGivenFileDbKey_1.localFileGivenFileDbKey(this.directory, key);
-            const isAccessible = await file.isAccessible();
-            if (!isAccessible) {
-                return undefined;
-            }
-            const rawFileContents = await file.toContentString();
-            let contents;
-            if (this._encryptionKey != null) {
-                contents = node_crypto_1.EncryptedData.givenEncryptedHexString(rawFileContents).toDecryptedString(this._encryptionKey);
-            }
-            else {
-                contents = rawFileContents;
-            }
-            const serializable = JSON.parse(contents);
+            const serializable = await this.props.adapters.dataAdapter.toOptionalValue(key);
             const valuesByIndex = new Map(Object.entries(serializable.valuesByIndex || {}));
             const result = {
                 key: serializable.key,
@@ -126,7 +113,7 @@ class FileDb {
                 row.data = data;
             }
             this._rowCache.put(key, row);
-            const file = localFileGivenFileDbKey_1.localFileGivenFileDbKey(this.directory, key);
+            const file = await this.props.adapters.dataAdapter.toOptionalValue(key);
             const serializable = {
                 key: row.key,
                 createdAtMs: row.createdAt.toEpochMilliseconds(),
@@ -184,20 +171,12 @@ class FileDb {
                 }
             }
             await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(Array.from(changedCollections), async (collectionKey) => {
-                await promiseOfUpdatedFileDbCollection_1.promiseOfUpdatedFileDbCollection(this.directory, collectionKey, this._keysByCollection.get(collectionKey), this._encryptionKey);
+                await updateKeysByCollection_1.updateKeysByCollection(this.props.adapters.collectionsAdapter, collectionKey, this._keysByCollection.get(collectionKey));
             });
             await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(Array.from(changedIndexes), async (indexKey) => {
-                await promiseOfUpdatedFileDbIndex_1.promiseOfUpdatedFileDbIndex(this.directory, indexKey, this._valuesByKeyByIndex.get(indexKey), this._encryptionKey);
+                await updateValuesByKeyByIndex_1.updateValuesByKeyByIndex(this.props.adapters.indexesAdapter, indexKey, this._valuesByKeyByIndex.get(indexKey));
             });
-            const contents = JSON.stringify(serializable, null, 2);
-            let rawFileContents;
-            if (this._encryptionKey != null) {
-                rawFileContents = node_crypto_1.EncryptedData.givenDecryptedStringAndKey(contents, this._encryptionKey).toEncryptedHexString();
-            }
-            else {
-                rawFileContents = contents;
-            }
-            await file.writeFile(rawFileContents);
+            await this.props.adapters.dataAdapter.setValue(key, serializable);
             return row;
         };
         this._listKeys = async (options = {}) => {
@@ -278,22 +257,18 @@ class FileDb {
                 setTimeout(this._nextInstruction, 1);
             }
         };
-        this.label = definition.label;
-        this.directory = definition.directory;
-        this._encryptionKey = definition.encryptionKey;
-        this._rowCache = new LRUCache_1.LRUCache(definition.cacheSize || 10);
-        this._collectionsGivenData = definition.collectionsGivenData;
-        this._valuesByIndexGivenData = definition.valuesByIndexGivenData;
+        this._rowCache = new LRUCache_1.LRUCache(props.cacheSize || 10);
     }
-    static async ofDefinition(definition) {
-        const result = new FileDb(definition);
-        await result.init();
-        return result;
-    }
-    async init() {
-        this._allKeys = await rowKeysGivenFileDbDirectory_1.rowKeysGivenFileDbDirectory(this.directory);
-        this._keysByCollection = await keysByCollectionGivenFileDbDirectory_1.keysByCollectionGivenFileDbDirectory(this.directory, this._encryptionKey);
-        this._valuesByKeyByIndex = await valuesByKeyByIndexGivenFileDbDirectory_1.valuesByKeyByIndexGivenFileDbDirectory(this.directory, this._encryptionKey);
+    onActivate() {
+        this.props.adapters.dataAdapter.toKeys().then((keys) => {
+            this._allKeys = keys;
+        });
+        keysByCollectionGivenAdapter_1.keysByCollectionGivenAdapter(this.props.adapters.collectionsAdapter).then((result) => {
+            this._keysByCollection = result;
+        });
+        valuesByKeyByIndexGivenFileDbDirectory_1.valuesByKeyByIndexGivenAdapter(this.props.adapters.indexesAdapter).then((result) => {
+            this._valuesByKeyByIndex = result;
+        });
     }
     toCollections() {
         return Array.from(this._keysByCollection.keys());
