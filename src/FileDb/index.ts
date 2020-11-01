@@ -9,6 +9,24 @@ import { valuesByKeyByIndexGivenAdapter } from "./_internal/valuesByKeyByIndexGi
 import { updateKeysByCollection } from "./_internal/updateKeysByCollection";
 import { updateValuesByKeyByIndex } from "./_internal/updateValuesByKeyByIndex";
 import { FileDbAdapters, PortableRow } from "../FileDbAdapters";
+import { Observable } from "@anderjason/observable";
+
+function asyncGivenObservable<T>(observable: Observable<T>): Promise<T> {
+  if (observable.value != null) {
+    return Promise.resolve(observable.value);
+  }
+
+  return new Promise((resolve) => {
+    const receipt = observable.didChange.subscribe((value) => {
+      if (value == null) {
+        return;
+      }
+
+      receipt.cancel();
+      resolve(value);
+    });
+  });
+}
 
 export interface FileDbRow<T> {
   key: string;
@@ -97,9 +115,11 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
   readonly label: string;
 
   private _rowCache: LRUCache<FileDbRow<T>>;
-  private _keysByCollection: Map<string, Set<string>>;
-  private _valuesByKeyByIndex: Map<string, Map<string, number>>;
-  private _allKeys: string[];
+  private _keysByCollection = Observable.ofEmpty<Map<string, Set<string>>>();
+  private _valuesByKeyByIndex = Observable.ofEmpty<
+    Map<string, Map<string, number>>
+  >();
+  private _allKeys = Observable.ofEmpty<string[]>();
   private _instructions: FileDbInstruction<T>[] = [];
 
   constructor(props: FileDbProps<T>) {
@@ -112,24 +132,25 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     this.addActor(this.props.adapters);
 
     this.props.adapters.props.dataAdapter.toKeys().then((keys) => {
-      this._allKeys = keys;
+      this._allKeys.setValue(keys);
     });
 
     keysByCollectionGivenAdapter(
       this.props.adapters.props.collectionsAdapter
     ).then((result) => {
-      this._keysByCollection = result;
+      this._keysByCollection.setValue(result);
     });
 
     valuesByKeyByIndexGivenAdapter(
       this.props.adapters.props.indexesAdapter
     ).then((result) => {
-      this._valuesByKeyByIndex = result;
+      this._valuesByKeyByIndex.setValue(result);
     });
   }
 
-  toCollections(): string[] {
-    return Array.from(this._keysByCollection.keys());
+  async toCollections(): Promise<string[]> {
+    const keysByCollection = await asyncGivenObservable(this._keysByCollection);
+    return Array.from(keysByCollection.keys());
   }
 
   async toKeys(options: FileDbReadOptions = {}): Promise<string[]> {
@@ -267,8 +288,13 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     const changedCollections = new Set<string>();
     const changedIndexes = new Set<string>();
 
+    const keysByCollection = await asyncGivenObservable(this._keysByCollection);
+    const valuesByKeyByIndex = await asyncGivenObservable(
+      this._valuesByKeyByIndex
+    );
+
     existingRow.collections.forEach((collectionKey) => {
-      const rowKeysOfThisCollection = this._keysByCollection.get(collectionKey);
+      const rowKeysOfThisCollection = keysByCollection.get(collectionKey);
 
       if (rowKeysOfThisCollection != null) {
         rowKeysOfThisCollection.delete(rowKey);
@@ -277,7 +303,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     });
 
     for (const indexKey of existingRow.valuesByIndex.keys()) {
-      const valuesByKey = this._valuesByKeyByIndex.get(indexKey);
+      const valuesByKey = valuesByKeyByIndex.get(indexKey);
 
       if (valuesByKey != null) {
         valuesByKey.delete(rowKey);
@@ -291,7 +317,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
         await updateKeysByCollection(
           this.props.adapters.props.collectionsAdapter,
           collectionKey,
-          this._keysByCollection.get(collectionKey)
+          keysByCollection.get(collectionKey)
         );
       }
     );
@@ -302,7 +328,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
         await updateValuesByKeyByIndex(
           this.props.adapters.props.indexesAdapter,
           indexKey,
-          this._valuesByKeyByIndex.get(indexKey)
+          valuesByKeyByIndex.get(indexKey)
         );
       }
     );
@@ -412,19 +438,23 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     const changedCollections = new Set<string>();
     const changedIndexes = new Set<string>();
 
+    const keysByCollection = await asyncGivenObservable(this._keysByCollection);
+    const valuesByKeyByIndex = await asyncGivenObservable(
+      this._valuesByKeyByIndex
+    );
     row.collections.forEach((collection) => {
-      if (!this._keysByCollection.has(collection)) {
-        this._keysByCollection.set(collection, new Set());
+      if (!keysByCollection.has(collection)) {
+        keysByCollection.set(collection, new Set());
       }
     });
 
     for (const index of row.valuesByIndex.keys()) {
-      if (!this._valuesByKeyByIndex.has(index)) {
-        this._valuesByKeyByIndex.set(index, new Map());
+      if (!valuesByKeyByIndex.has(index)) {
+        valuesByKeyByIndex.set(index, new Map());
       }
     }
 
-    for (const [collection, keys] of this._keysByCollection) {
+    for (const [collection, keys] of keysByCollection) {
       if (row.collections.has(collection)) {
         if (!keys.has(row.key)) {
           keys.add(row.key);
@@ -438,7 +468,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
       }
     }
 
-    for (const [index, valuesByKey] of this._valuesByKeyByIndex) {
+    for (const [index, valuesByKey] of valuesByKeyByIndex) {
       const value = row.valuesByIndex.get(index);
       const currentValue = valuesByKey.get(row.key);
 
@@ -457,7 +487,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
         await updateKeysByCollection(
           this.props.adapters.props.collectionsAdapter,
           collectionKey,
-          this._keysByCollection.get(collectionKey)
+          keysByCollection.get(collectionKey)
         );
       }
     );
@@ -468,7 +498,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
         await updateValuesByKeyByIndex(
           this.props.adapters.props.indexesAdapter,
           indexKey,
-          this._valuesByKeyByIndex.get(indexKey)
+          valuesByKeyByIndex.get(indexKey)
         );
       }
     );
@@ -484,10 +514,13 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     let result: string[];
 
     if (options.filter == null || options.filter.length === 0) {
-      result = this._allKeys;
+      result = await asyncGivenObservable(this._allKeys);
     } else {
+      const keysByCollection = await asyncGivenObservable(
+        this._keysByCollection
+      );
       const sets = options.filter.map((collection) => {
-        return this._keysByCollection.get(collection) || new Set<string>();
+        return keysByCollection.get(collection) || new Set<string>();
       });
 
       result = Array.from(SetUtil.intersectionGivenSets(sets));
@@ -495,7 +528,10 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
 
     const index = options.orderBy;
     if (index != null) {
-      const valuesByKey = this._valuesByKeyByIndex.get(index);
+      const valuesByKeyByIndex = await asyncGivenObservable(
+        this._valuesByKeyByIndex
+      );
+      const valuesByKey = valuesByKeyByIndex.get(index);
       if (valuesByKey == null) {
         throw new Error(`Missing index '${index}'`);
       }

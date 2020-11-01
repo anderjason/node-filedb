@@ -43,7 +43,7 @@ export declare class FileDb<T> extends Actor<FileDbProps<T>> {
     private _instructions;
     constructor(props: FileDbProps<T>);
     onActivate(): void;
-    toCollections(): string[];
+    toCollections(): Promise<string[]>;
     toKeys(options?: FileDbReadOptions): Promise<string[]>;
     hasKey(key: string): Promise<boolean>;
     toCount(filter?: string[]): Promise<number>;

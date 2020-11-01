@@ -10,9 +10,27 @@ const keysByCollectionGivenAdapter_1 = require("./_internal/keysByCollectionGive
 const valuesByKeyByIndexGivenFileDbDirectory_1 = require("./_internal/valuesByKeyByIndexGivenFileDbDirectory");
 const updateKeysByCollection_1 = require("./_internal/updateKeysByCollection");
 const updateValuesByKeyByIndex_1 = require("./_internal/updateValuesByKeyByIndex");
+const observable_1 = require("@anderjason/observable");
+function asyncGivenObservable(observable) {
+    if (observable.value != null) {
+        return Promise.resolve(observable.value);
+    }
+    return new Promise((resolve) => {
+        const receipt = observable.didChange.subscribe((value) => {
+            if (value == null) {
+                return;
+            }
+            receipt.cancel();
+            resolve(value);
+        });
+    });
+}
 class FileDb extends skytree_1.Actor {
     constructor(props) {
         super(props);
+        this._keysByCollection = observable_1.Observable.ofEmpty();
+        this._valuesByKeyByIndex = observable_1.Observable.ofEmpty();
+        this._allKeys = observable_1.Observable.ofEmpty();
         this._instructions = [];
         this.toDeletePromise = (key) => {
             return new Promise((resolve, reject) => {
@@ -39,25 +57,27 @@ class FileDb extends skytree_1.Actor {
             }
             const changedCollections = new Set();
             const changedIndexes = new Set();
+            const keysByCollection = await asyncGivenObservable(this._keysByCollection);
+            const valuesByKeyByIndex = await asyncGivenObservable(this._valuesByKeyByIndex);
             existingRow.collections.forEach((collectionKey) => {
-                const rowKeysOfThisCollection = this._keysByCollection.get(collectionKey);
+                const rowKeysOfThisCollection = keysByCollection.get(collectionKey);
                 if (rowKeysOfThisCollection != null) {
                     rowKeysOfThisCollection.delete(rowKey);
                     changedCollections.add(collectionKey);
                 }
             });
             for (const indexKey of existingRow.valuesByIndex.keys()) {
-                const valuesByKey = this._valuesByKeyByIndex.get(indexKey);
+                const valuesByKey = valuesByKeyByIndex.get(indexKey);
                 if (valuesByKey != null) {
                     valuesByKey.delete(rowKey);
                     changedIndexes.add(indexKey);
                 }
             }
             await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(Array.from(changedCollections), async (collectionKey) => {
-                await updateKeysByCollection_1.updateKeysByCollection(this.props.adapters.props.collectionsAdapter, collectionKey, this._keysByCollection.get(collectionKey));
+                await updateKeysByCollection_1.updateKeysByCollection(this.props.adapters.props.collectionsAdapter, collectionKey, keysByCollection.get(collectionKey));
             });
             await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(Array.from(changedIndexes), async (indexKey) => {
-                await updateValuesByKeyByIndex_1.updateValuesByKeyByIndex(this.props.adapters.props.indexesAdapter, indexKey, this._valuesByKeyByIndex.get(indexKey));
+                await updateValuesByKeyByIndex_1.updateValuesByKeyByIndex(this.props.adapters.props.indexesAdapter, indexKey, valuesByKeyByIndex.get(indexKey));
             });
             await this.props.adapters.props.dataAdapter.deleteKey(rowKey);
         };
@@ -135,17 +155,19 @@ class FileDb extends skytree_1.Actor {
             serializable.valuesByIndex = obj;
             const changedCollections = new Set();
             const changedIndexes = new Set();
+            const keysByCollection = await asyncGivenObservable(this._keysByCollection);
+            const valuesByKeyByIndex = await asyncGivenObservable(this._valuesByKeyByIndex);
             row.collections.forEach((collection) => {
-                if (!this._keysByCollection.has(collection)) {
-                    this._keysByCollection.set(collection, new Set());
+                if (!keysByCollection.has(collection)) {
+                    keysByCollection.set(collection, new Set());
                 }
             });
             for (const index of row.valuesByIndex.keys()) {
-                if (!this._valuesByKeyByIndex.has(index)) {
-                    this._valuesByKeyByIndex.set(index, new Map());
+                if (!valuesByKeyByIndex.has(index)) {
+                    valuesByKeyByIndex.set(index, new Map());
                 }
             }
-            for (const [collection, keys] of this._keysByCollection) {
+            for (const [collection, keys] of keysByCollection) {
                 if (row.collections.has(collection)) {
                     if (!keys.has(row.key)) {
                         keys.add(row.key);
@@ -159,7 +181,7 @@ class FileDb extends skytree_1.Actor {
                     }
                 }
             }
-            for (const [index, valuesByKey] of this._valuesByKeyByIndex) {
+            for (const [index, valuesByKey] of valuesByKeyByIndex) {
                 const value = row.valuesByIndex.get(index);
                 const currentValue = valuesByKey.get(row.key);
                 if (value != null && value !== currentValue) {
@@ -172,10 +194,10 @@ class FileDb extends skytree_1.Actor {
                 }
             }
             await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(Array.from(changedCollections), async (collectionKey) => {
-                await updateKeysByCollection_1.updateKeysByCollection(this.props.adapters.props.collectionsAdapter, collectionKey, this._keysByCollection.get(collectionKey));
+                await updateKeysByCollection_1.updateKeysByCollection(this.props.adapters.props.collectionsAdapter, collectionKey, keysByCollection.get(collectionKey));
             });
             await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(Array.from(changedIndexes), async (indexKey) => {
-                await updateValuesByKeyByIndex_1.updateValuesByKeyByIndex(this.props.adapters.props.indexesAdapter, indexKey, this._valuesByKeyByIndex.get(indexKey));
+                await updateValuesByKeyByIndex_1.updateValuesByKeyByIndex(this.props.adapters.props.indexesAdapter, indexKey, valuesByKeyByIndex.get(indexKey));
             });
             await this.props.adapters.props.dataAdapter.setValue(key, serializable);
             return row;
@@ -183,17 +205,19 @@ class FileDb extends skytree_1.Actor {
         this._listKeys = async (options = {}) => {
             let result;
             if (options.filter == null || options.filter.length === 0) {
-                result = this._allKeys;
+                result = await asyncGivenObservable(this._allKeys);
             }
             else {
+                const keysByCollection = await asyncGivenObservable(this._keysByCollection);
                 const sets = options.filter.map((collection) => {
-                    return this._keysByCollection.get(collection) || new Set();
+                    return keysByCollection.get(collection) || new Set();
                 });
                 result = Array.from(util_1.SetUtil.intersectionGivenSets(sets));
             }
             const index = options.orderBy;
             if (index != null) {
-                const valuesByKey = this._valuesByKeyByIndex.get(index);
+                const valuesByKeyByIndex = await asyncGivenObservable(this._valuesByKeyByIndex);
+                const valuesByKey = valuesByKeyByIndex.get(index);
                 if (valuesByKey == null) {
                     throw new Error(`Missing index '${index}'`);
                 }
@@ -263,17 +287,18 @@ class FileDb extends skytree_1.Actor {
     onActivate() {
         this.addActor(this.props.adapters);
         this.props.adapters.props.dataAdapter.toKeys().then((keys) => {
-            this._allKeys = keys;
+            this._allKeys.setValue(keys);
         });
         keysByCollectionGivenAdapter_1.keysByCollectionGivenAdapter(this.props.adapters.props.collectionsAdapter).then((result) => {
-            this._keysByCollection = result;
+            this._keysByCollection.setValue(result);
         });
         valuesByKeyByIndexGivenFileDbDirectory_1.valuesByKeyByIndexGivenAdapter(this.props.adapters.props.indexesAdapter).then((result) => {
-            this._valuesByKeyByIndex = result;
+            this._valuesByKeyByIndex.setValue(result);
         });
     }
-    toCollections() {
-        return Array.from(this._keysByCollection.keys());
+    async toCollections() {
+        const keysByCollection = await asyncGivenObservable(this._keysByCollection);
+        return Array.from(keysByCollection.keys());
     }
     async toKeys(options = {}) {
         return new Promise((resolve, reject) => {
