@@ -1,4 +1,3 @@
-import { UnsaltedHash } from "@anderjason/node-crypto";
 import { LocalDirectory, LocalFile } from "@anderjason/node-filesystem";
 import { PromiseUtil } from "@anderjason/util";
 import { Actor } from "skytree";
