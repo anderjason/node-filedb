@@ -28,7 +28,9 @@ class FileDb extends skytree_1.Actor {
             if (existingRecord == null) {
                 return;
             }
-            await this.ensureReady();
+            if (this._isReady.value == false) {
+                await this.ensureReady();
+            }
             const changedTags = new Set();
             const changedMetrics = new Set();
             existingRecord.tagKeys.toArray().forEach((tagKey) => {
@@ -65,7 +67,9 @@ class FileDb extends skytree_1.Actor {
             if (cachedRecord != null) {
                 return cachedRecord;
             }
-            await this.ensureReady();
+            if (this._isReady.value == false) {
+                await this.ensureReady();
+            }
             let portableRecord = await this.props.adapters.props.recordsAdapter.toOptionalValueGivenKey(recordKey);
             if (portableRecord == null) {
                 return undefined;
@@ -88,7 +92,9 @@ class FileDb extends skytree_1.Actor {
             if (recordKey.length < 5) {
                 throw new Error("Record key length must be at least 5 characters");
             }
-            await this.ensureReady();
+            if (this._isReady.value == false) {
+                await this.ensureReady();
+            }
             let record = await this._readRecord(recordKey);
             const tagKeys = this.props.tagKeysGivenRecordData(recordData);
             const metricValues = this.props.metricsGivenRecordData(recordData);
@@ -167,7 +173,9 @@ class FileDb extends skytree_1.Actor {
         };
         this._listRecordKeys = async (options = {}) => {
             let recordKeys;
-            await this.ensureReady();
+            if (this._isReady.value == false) {
+                await this.ensureReady();
+            }
             if (options.requireTagKeys == null || options.requireTagKeys.length === 0) {
                 recordKeys = this._allRecordKeys.value;
             }
@@ -271,7 +279,6 @@ class FileDb extends skytree_1.Actor {
         const recordKeys = await recordsAdapter.toKeys();
         const tagKeys = await tagsAdapter.toKeys();
         const metricKeys = await metricsAdapter.toKeys();
-        this._allRecordKeys.setValue(recordKeys);
         await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(tagKeys, async (tagKey) => {
             const tag = new Tag_1.Tag({
                 tagKey,
@@ -288,6 +295,7 @@ class FileDb extends skytree_1.Actor {
             await metric.load();
             this._metrics.setValue(metricKey, metric);
         });
+        this._allRecordKeys.setValue(recordKeys);
         this._isReady.setValue(true);
     }
     async toRecordKeys(options = {}) {

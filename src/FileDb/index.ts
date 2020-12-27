@@ -116,8 +116,6 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     const recordKeys = await recordsAdapter.toKeys();
     const tagKeys = await tagsAdapter.toKeys();
     const metricKeys = await metricsAdapter.toKeys();
-
-    this._allRecordKeys.setValue(recordKeys);
     
     await PromiseUtil.asyncSequenceGivenArrayAndCallback(
       tagKeys,
@@ -146,6 +144,8 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
         this._metrics.setValue(metricKey, metric);
       }
     );
+
+    this._allRecordKeys.setValue(recordKeys);
 
     this._isReady.setValue(true);
   }
@@ -288,7 +288,9 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
       return;
     }
 
-    await this.ensureReady();
+    if (this._isReady.value == false) {
+      await this.ensureReady();
+    }
 
     const changedTags = new Set<Tag>();
     const changedMetrics = new Set<Metric>();
@@ -345,7 +347,9 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
       return cachedRecord;
     }
 
-    await this.ensureReady();
+    if (this._isReady.value == false) {
+      await this.ensureReady();
+    }
 
     let portableRecord = await this.props.adapters.props.recordsAdapter.toOptionalValueGivenKey(
       recordKey
@@ -382,7 +386,9 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
       throw new Error("Record key length must be at least 5 characters");
     }
 
-    await this.ensureReady();
+    if (this._isReady.value == false) {
+      await this.ensureReady();
+    }
 
     let record: DbRecord<T> | undefined = await this._readRecord(recordKey);
 
@@ -500,7 +506,9 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
   ): Promise<string[]> => {
     let recordKeys: string[];
 
-    await this.ensureReady();
+    if (this._isReady.value == false) {
+      await this.ensureReady();
+    }
 
     if (options.requireTagKeys == null || options.requireTagKeys.length === 0) {
       recordKeys = this._allRecordKeys.value;

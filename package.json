@@ -21,7 +21,7 @@
   "dependencies": {
     "@anderjason/node-crypto": "^2.0.0",
     "@anderjason/node-filesystem": "^2.0.0",
-    "@anderjason/observable": "^3.2.0",
+    "@anderjason/observable": "^3.2.1",
     "@anderjason/time": "^2.0.2",
     "@anderjason/util": "^2.0.3",
     "skytree": "^9.3.1"
