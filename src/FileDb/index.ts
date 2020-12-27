@@ -109,12 +109,16 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
       return;
     }
 
+    const recordsAdapter = this.props.adapters.props.recordsAdapter;
     const tagsAdapter = this.props.adapters.props.tagsAdapter;
     const metricsAdapter = this.props.adapters.props.metricsAdapter;
 
+    const recordKeys = await recordsAdapter.toKeys();
     const tagKeys = await tagsAdapter.toKeys();
     const metricKeys = await metricsAdapter.toKeys();
 
+    this._allRecordKeys.setValue(recordKeys);
+    
     await PromiseUtil.asyncSequenceGivenArrayAndCallback(
       tagKeys,
       async (tagKey) => {

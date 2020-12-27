@@ -65,7 +65,7 @@ export class FileDbAdapters extends Actor<FileDbAdaptersProps> {
 
     return new FileDbAdapters({
       tagsAdapter: new LocalFileAdapter({
-        directory: LocalDirectory.givenRelativePath(directory, "collections"),
+        directory: LocalDirectory.givenRelativePath(directory, "tags"),
         bufferGivenValue,
         valueGivenBuffer,
       }),
@@ -75,7 +75,7 @@ export class FileDbAdapters extends Actor<FileDbAdaptersProps> {
         valueGivenBuffer,
       }),
       metricsAdapter: new LocalFileAdapter({
-        directory: LocalDirectory.givenRelativePath(directory, "indexes"),
+        directory: LocalDirectory.givenRelativePath(directory, "metrics"),
         bufferGivenValue,
         valueGivenBuffer,
       }),

@@ -22,7 +22,7 @@ class FileDbAdapters extends skytree_1.Actor {
         };
         return new FileDbAdapters({
             tagsAdapter: new LocalFileAdapter_1.LocalFileAdapter({
-                directory: node_filesystem_1.LocalDirectory.givenRelativePath(directory, "collections"),
+                directory: node_filesystem_1.LocalDirectory.givenRelativePath(directory, "tags"),
                 bufferGivenValue,
                 valueGivenBuffer,
             }),
@@ -32,7 +32,7 @@ class FileDbAdapters extends skytree_1.Actor {
                 valueGivenBuffer,
             }),
             metricsAdapter: new LocalFileAdapter_1.LocalFileAdapter({
-                directory: node_filesystem_1.LocalDirectory.givenRelativePath(directory, "indexes"),
+                directory: node_filesystem_1.LocalDirectory.givenRelativePath(directory, "metrics"),
                 bufferGivenValue,
                 valueGivenBuffer,
             }),

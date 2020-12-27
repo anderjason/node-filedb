@@ -265,10 +265,13 @@ class FileDb extends skytree_1.Actor {
         if (this.isActive.value == false) {
             return;
         }
+        const recordsAdapter = this.props.adapters.props.recordsAdapter;
         const tagsAdapter = this.props.adapters.props.tagsAdapter;
         const metricsAdapter = this.props.adapters.props.metricsAdapter;
+        const recordKeys = await recordsAdapter.toKeys();
         const tagKeys = await tagsAdapter.toKeys();
         const metricKeys = await metricsAdapter.toKeys();
+        this._allRecordKeys.setValue(recordKeys);
         await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(tagKeys, async (tagKey) => {
             const tag = new Tag_1.Tag({
                 tagKey,
