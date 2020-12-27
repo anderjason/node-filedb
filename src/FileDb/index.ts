@@ -3,38 +3,20 @@ import { Actor } from "skytree";
 import { Instant } from "@anderjason/time";
 import { ArrayUtil, PromiseUtil, SetUtil } from "@anderjason/util";
 import { LRUCache } from "../LRUCache";
-import { keysByCollectionGivenAdapter } from "./_internal/keysByCollectionGivenAdapter";
-import { valuesByKeyByIndexGivenAdapter } from "./_internal/valuesByKeyByIndexGivenFileDbDirectory";
-import { updateKeysByCollection } from "./_internal/updateKeysByCollection";
-import { updateValuesByKeyByIndex } from "./_internal/updateValuesByKeyByIndex";
-import { FileDbAdapters, PortableRow } from "../FileDbAdapters";
-import { Observable, ReadOnlyObservable } from "@anderjason/observable";
-import { asyncGivenObservable } from "../asyncGivenObservable";
-
-export interface FileDbRow<T> {
-  key: string;
-  createdAt: Instant;
-  updatedAt: Instant;
-  data: T;
-  collections: Set<string>;
-  valuesByIndex: Map<string, number>;
-}
-
-export interface SerializableFileDbCollection {
-  collection: string;
-  keys: string[];
-}
-
-export interface SerializableFileDbIndex {
-  index: string;
-  valuesByKey: {
-    [key: string]: number;
-  };
-}
+import { Metric } from "./Metric";
+import { Tag } from "./Tag";
+import { FileDbAdapters, PortableRecord } from "../FileDbAdapters";
+import {
+  Dict,
+  Observable,
+  ObservableDict,
+  ReadOnlyObservable,
+} from "@anderjason/observable";
+import { DbRecord } from "./DbRecord";
 
 export interface FileDbReadOptions {
-  filter?: string[];
-  orderBy?: string;
+  requireTagKeys?: string[];
+  orderByMetricKey?: string;
   limit?: number;
   offset?: number;
 }
@@ -44,14 +26,14 @@ interface FileDbWriteInstruction<T> {
   time: Instant;
   key?: string;
   data: T;
-  resolve: (result: FileDbRow<T>) => void;
+  resolve: (result: DbRecord<T>) => void;
   reject: (reason?: any) => void;
 }
 
 interface FileDbReadInstruction<T> {
   type: "read";
   key: string;
-  resolve: (result: FileDbRow<T> | undefined) => void;
+  resolve: (result: DbRecord<T> | undefined) => void;
   reject: (reason?: any) => void;
 }
 
@@ -62,17 +44,17 @@ interface FileDbDeleteInstruction {
   reject: (reason?: any) => void;
 }
 
-interface FileDbListKeysInstruction {
-  type: "listKeys";
+interface FileDbListRecordKeysInstruction {
+  type: "listRecordKeys";
   options?: FileDbReadOptions;
   resolve: (result: string[]) => void;
   reject: (reason?: any) => void;
 }
 
-interface FileDbListRowsInstruction<T> {
-  type: "listRows";
+interface FileDbListRecordsInstruction<T> {
+  type: "listRecords";
   options?: FileDbReadOptions;
-  resolve: (result: FileDbRow<T>[]) => void;
+  resolve: (result: DbRecord<T>[]) => void;
   reject: (reason?: any) => void;
 }
 
@@ -80,14 +62,14 @@ type FileDbInstruction<T> =
   | FileDbWriteInstruction<T>
   | FileDbReadInstruction<T>
   | FileDbDeleteInstruction
-  | FileDbListKeysInstruction
-  | FileDbListRowsInstruction<T>;
+  | FileDbListRecordKeysInstruction
+  | FileDbListRecordsInstruction<T>;
 
 export interface FileDbProps<T> {
   adapters: FileDbAdapters;
 
-  collectionsGivenData: (data: T) => Set<string>;
-  valuesByIndexGivenData: (data: T) => Map<string, number>;
+  tagKeysGivenRecordData: (data: T) => Set<string>;
+  metricsGivenRecordData: (data: T) => Dict<number>;
 
   cacheSize?: number;
 }
@@ -96,62 +78,78 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
   private _isReady = Observable.givenValue(false, Observable.isStrictEqual);
   readonly isReady = ReadOnlyObservable.givenObservable(this._isReady);
 
-  private _rowCache: LRUCache<FileDbRow<T>>;
-  private _keysByCollection = Observable.ofEmpty<Map<string, Set<string>>>();
-  private _valuesByKeyByIndex = Observable.ofEmpty<
-    Map<string, Map<string, number>>
-  >();
-  private _allKeys = Observable.ofEmpty<string[]>();
+  private _recordCache: LRUCache<DbRecord<T>>;
+  private _tags = ObservableDict.ofEmpty<Tag>();
+  private _metrics = ObservableDict.ofEmpty<Metric>();
+  private _allRecordKeys = Observable.ofEmpty<string[]>();
   private _instructions: FileDbInstruction<T>[] = [];
 
   constructor(props: FileDbProps<T>) {
     super(props);
 
-    this._rowCache = new LRUCache<FileDbRow<T>>(props.cacheSize || 10);
+    this._recordCache = new LRUCache<DbRecord<T>>(props.cacheSize || 10);
   }
 
   onActivate(): void {
     this.addActor(this.props.adapters);
 
-    const checkIsReady = () => {
-      this._isReady.setValue(
-        this._allKeys.value != null &&
-          this._keysByCollection.value != null &&
-          this._valuesByKeyByIndex.value != null
-      );
-    };
-
-    this.props.adapters.props.dataAdapter.toKeys().then((keys) => {
-      this._allKeys.setValue(keys);
-      checkIsReady();
-    });
-
-    keysByCollectionGivenAdapter(
-      this.props.adapters.props.collectionsAdapter
-    ).then((result) => {
-      this._keysByCollection.setValue(result);
-      checkIsReady();
-    });
-
-    valuesByKeyByIndexGivenAdapter(
-      this.props.adapters.props.indexesAdapter
-    ).then((result) => {
-      this._valuesByKeyByIndex.setValue(result);
-      checkIsReady();
-    });
+    this.load();
   }
 
-  async toCollections(): Promise<string[]> {
-    const keysByCollection = await asyncGivenObservable({
-      observable: this._keysByCollection,
-    });
-    return Array.from(keysByCollection.keys());
+  get tags(): Tag[] {
+    return Object.values(this._tags.toValues());
   }
 
-  async toKeys(options: FileDbReadOptions = {}): Promise<string[]> {
+  get metrics(): Metric[] {
+    return Object.values(this._metrics.toValues());
+  }
+
+  private async load(): Promise<void> {
+    if (this.isActive.value == false) {
+      return;
+    }
+
+    const tagsAdapter = this.props.adapters.props.tagsAdapter;
+    const metricsAdapter = this.props.adapters.props.metricsAdapter;
+
+    const tagKeys = await tagsAdapter.toKeys();
+    const metricKeys = await metricsAdapter.toKeys();
+
+    await PromiseUtil.asyncSequenceGivenArrayAndCallback(
+      tagKeys,
+      async (tagKey) => {
+        const tag = new Tag({
+          tagKey,
+          adapter: tagsAdapter,
+        });
+
+        await tag.load();
+
+        this._tags.setValue(tagKey, tag);
+      }
+    );
+
+    await PromiseUtil.asyncSequenceGivenArrayAndCallback(
+      metricKeys,
+      async (metricKey) => {
+        const metric = new Metric({
+          metricKey,
+          adapter: metricsAdapter,
+        });
+
+        await metric.load();
+
+        this._metrics.setValue(metricKey, metric);
+      }
+    );
+
+    this._isReady.setValue(true);
+  }
+
+  async toRecordKeys(options: FileDbReadOptions = {}): Promise<string[]> {
     return new Promise((resolve, reject) => {
-      const instruction: FileDbListKeysInstruction = {
-        type: "listKeys",
+      const instruction: FileDbListRecordKeysInstruction = {
+        type: "listRecordKeys",
         options,
         resolve,
         reject,
@@ -165,23 +163,23 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     });
   }
 
-  async hasKey(key: string): Promise<boolean> {
-    const keys = await this.toKeys(); // await this to get an instruction into the queue
-    return keys.includes(key);
+  async hasRecord(recordKey: string): Promise<boolean> {
+    const keys = await this.toRecordKeys();
+    return keys.includes(recordKey);
   }
 
-  async toCount(filter?: string[]): Promise<number> {
-    const keys = await this.toKeys({
-      // await this to get an instruction into the queue
-      filter,
+  async toRecordCount(requireTagKeys?: string[]): Promise<number> {
+    const keys = await this.toRecordKeys({
+      requireTagKeys: requireTagKeys,
     });
+
     return keys.length;
   }
 
-  async toRows(options: FileDbReadOptions = {}): Promise<FileDbRow<T>[]> {
+  async toRecords(options: FileDbReadOptions = {}): Promise<DbRecord<T>[]> {
     return new Promise((resolve, reject) => {
-      const instruction: FileDbListRowsInstruction<T> = {
-        type: "listRows",
+      const instruction: FileDbListRecordsInstruction<T> = {
+        type: "listRecords",
         options,
         resolve,
         reject,
@@ -195,10 +193,10 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     });
   }
 
-  async toOptionalFirstRow(
+  async toOptionalFirstRecord(
     options: FileDbReadOptions = {}
-  ): Promise<FileDbRow<T> | undefined> {
-    const results = await this.toRows({
+  ): Promise<DbRecord<T> | undefined> {
+    const results = await this.toRecords({
       ...options,
       limit: 1,
     });
@@ -206,20 +204,22 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     return results[0];
   }
 
-  async toRow(key: string): Promise<FileDbRow<T>> {
-    const result = await this.toOptionalRowGivenKey(key);
+  async toRecordGivenKey(recordKey: string): Promise<DbRecord<T>> {
+    const result = await this.toOptionalRecordGivenKey(recordKey);
     if (result == null) {
-      throw new Error(`Row not found for key '${key}'`);
+      throw new Error(`Record not found for key '${recordKey}'`);
     }
 
     return result;
   }
 
-  toOptionalRowGivenKey(key: string): Promise<FileDbRow<T> | undefined> {
+  toOptionalRecordGivenKey(
+    recordKey: string
+  ): Promise<DbRecord<T> | undefined> {
     return new Promise((resolve, reject) => {
       const instruction: FileDbReadInstruction<T> = {
         type: "read",
-        key,
+        key: recordKey,
         resolve,
         reject,
       };
@@ -232,13 +232,13 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     });
   }
 
-  writeRow(data: T, key?: string): Promise<FileDbRow<T>> {
+  writeRecord(recordData: T, recordKey?: string): Promise<DbRecord<T>> {
     return new Promise((resolve, reject) => {
       const instruction: FileDbWriteInstruction<T> = {
         type: "write",
         time: Instant.ofNow(),
-        key,
-        data,
+        key: recordKey,
+        data: recordData,
         resolve,
         reject,
       };
@@ -251,11 +251,11 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     });
   }
 
-  deleteKey(key: string): Promise<void> {
+  deleteKey(recordKey: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const instruction: FileDbDeleteInstruction = {
         type: "delete",
-        key,
+        key: recordKey,
         resolve,
         reject,
       };
@@ -268,284 +268,272 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     });
   }
 
-  private _delete = async (rowKey: string): Promise<void> => {
-    if (rowKey.length < 5) {
-      throw new Error("Key length must be at least 5 characters");
+  async ensureReady(): Promise<void> {
+    await this._isReady.toPromise((v) => v == true);
+  }
+
+  private _deleteRecord = async (recordKey: string): Promise<void> => {
+    if (recordKey.length < 5) {
+      throw new Error("Record key length must be at least 5 characters");
     }
 
-    this._rowCache.remove(rowKey);
+    this._recordCache.remove(recordKey);
 
-    const existingRow = await this.toOptionalRowGivenKey(rowKey);
-    if (existingRow == null) {
+    const existingRecord = await this.toOptionalRecordGivenKey(recordKey);
+    if (existingRecord == null) {
       return;
     }
 
-    const changedCollections = new Set<string>();
-    const changedIndexes = new Set<string>();
+    await this.ensureReady();
 
-    const keysByCollection = await asyncGivenObservable({
-      observable: this._keysByCollection,
-    });
-    const valuesByKeyByIndex = await asyncGivenObservable({
-      observable: this._valuesByKeyByIndex,
-    });
+    const changedTags = new Set<Tag>();
+    const changedMetrics = new Set<Metric>();
 
-    existingRow.collections.forEach((collectionKey) => {
-      const rowKeysOfThisCollection = keysByCollection.get(collectionKey);
+    existingRecord.tagKeys.toArray().forEach((tagKey) => {
+      const tag = this._tags.toOptionalValueGivenKey(tagKey);
 
-      if (rowKeysOfThisCollection != null) {
-        rowKeysOfThisCollection.delete(rowKey);
-        changedCollections.add(collectionKey);
+      if (tag != null && tag.recordKeys.hasValue(recordKey)) {
+        tag.recordKeys.removeValue(recordKey);
+        changedTags.add(tag);
       }
     });
 
-    for (const indexKey of existingRow.valuesByIndex.keys()) {
-      const valuesByKey = valuesByKeyByIndex.get(indexKey);
+    const metricKeys = existingRecord.metricValues.toKeys();
+    metricKeys.forEach((metricKey) => {
+      const metric = this._metrics.toOptionalValueGivenKey(metricKey);
 
-      if (valuesByKey != null) {
-        valuesByKey.delete(rowKey);
-        changedIndexes.add(indexKey);
+      if (metric != null && metric.recordMetricValues.hasKey(recordKey)) {
+        metric.recordMetricValues.removeKey(recordKey);
+        changedMetrics.add(metric);
       }
-    }
+    });
 
     await PromiseUtil.asyncSequenceGivenArrayAndCallback(
-      Array.from(changedCollections),
-      async (collectionKey) => {
-        await updateKeysByCollection(
-          this.props.adapters.props.collectionsAdapter,
-          collectionKey,
-          keysByCollection.get(collectionKey)
-        );
+      Array.from(changedTags),
+      async (tag) => {
+        await tag.save();
       }
     );
 
     await PromiseUtil.asyncSequenceGivenArrayAndCallback(
-      Array.from(changedIndexes),
-      async (indexKey) => {
-        await updateValuesByKeyByIndex(
-          this.props.adapters.props.indexesAdapter,
-          indexKey,
-          valuesByKeyByIndex.get(indexKey)
-        );
+      Array.from(changedMetrics),
+      async (metric) => {
+        await metric.save();
       }
     );
 
-    await this.props.adapters.props.dataAdapter.deleteKey(rowKey);
+    await this.props.adapters.props.recordsAdapter.deleteKey(recordKey);
   };
 
-  private _read = async (key: string): Promise<FileDbRow<T> | undefined> => {
-    if (key == null) {
-      throw new Error("Key is required");
+  private _readRecord = async (
+    recordKey: string
+  ): Promise<DbRecord<T> | undefined> => {
+    if (recordKey == null) {
+      throw new Error("Record key is required");
     }
 
-    if (key.length < 5) {
-      throw new Error("Key length must be at least 5 characters");
+    if (recordKey.length < 5) {
+      throw new Error("Record key length must be at least 5 characters");
     }
 
-    const cachedRow = this._rowCache.get(key);
-    if (cachedRow != null) {
-      return cachedRow;
+    const cachedRecord = this._recordCache.get(recordKey);
+    if (cachedRecord != null) {
+      return cachedRecord;
     }
 
-    let serializable = await this.props.adapters.props.dataAdapter.toOptionalValue(
-      key
+    await this.ensureReady();
+
+    let portableRecord = await this.props.adapters.props.recordsAdapter.toOptionalValueGivenKey(
+      recordKey
     );
 
-    if (serializable == null) {
+    if (portableRecord == null) {
       return undefined;
     }
 
-    const valuesByIndex = new Map<string, number>(
-      Object.entries(serializable.valuesByIndex || {})
-    );
+    const result: DbRecord<T> = new DbRecord({
+      recordKey: portableRecord.recordKey,
+      createdAt: Instant.givenEpochMilliseconds(portableRecord.createdAtMs),
+      updatedAt: Instant.givenEpochMilliseconds(portableRecord.updatedAtMs),
+      recordData: portableRecord.data,
+      tagKeys: new Set(portableRecord.tagKeys),
+      metricValues: portableRecord.metricValues || {},
+    });
 
-    const result: FileDbRow<T> = {
-      key: serializable.key,
-      createdAt: Instant.givenEpochMilliseconds(serializable.createdAtMs),
-      updatedAt: Instant.givenEpochMilliseconds(serializable.updatedAtMs),
-      data: serializable.data,
-      collections: new Set(serializable.collections),
-      valuesByIndex,
-    };
-
-    this._rowCache.put(key, result);
+    this._recordCache.put(recordKey, result);
 
     return result;
   };
 
-  private _write = async (
-    data: T,
+  private _writeRecord = async (
+    recordData: T,
     time: Instant,
-    key?: string
-  ): Promise<FileDbRow<T>> => {
-    if (key == null) {
-      key = UniqueId.ofRandom().toUUIDString();
+    recordKey?: string
+  ): Promise<DbRecord<T>> => {
+    if (recordKey == null) {
+      recordKey = UniqueId.ofRandom().toUUIDString();
     }
 
-    if (key.length < 5) {
-      throw new Error("Key length must be at least 5 characters");
+    if (recordKey.length < 5) {
+      throw new Error("Record key length must be at least 5 characters");
     }
 
-    let row: FileDbRow<T> | undefined = await this._read(key);
+    await this.ensureReady();
 
-    const collections = this.props.collectionsGivenData(data);
-    const valuesByIndex = this.props.valuesByIndexGivenData(data);
+    let record: DbRecord<T> | undefined = await this._readRecord(recordKey);
 
-    if (row == null) {
-      row = {
-        key,
+    const tagKeys: Set<string> = this.props.tagKeysGivenRecordData(recordData);
+    const metricValues = this.props.metricsGivenRecordData(recordData);
+
+    if (record == null) {
+      record = new DbRecord({
+        recordKey,
         createdAt: time,
         updatedAt: time,
-        data: data,
-        collections: collections,
-        valuesByIndex: valuesByIndex,
-      };
+        recordData,
+        tagKeys,
+        metricValues,
+      });
     } else {
-      row.updatedAt = time;
-      row.collections = collections;
-      row.valuesByIndex = valuesByIndex;
-      row.data = data;
+      record.updatedAt.setValue(time);
+      record.tagKeys.sync(tagKeys);
+      record.metricValues.sync(metricValues);
+      record.recordData.setValue(recordData);
     }
 
-    this._rowCache.put(key, row);
+    this._recordCache.put(recordKey, record);
 
-    const serializable: PortableRow = {
-      key: row.key,
-      createdAtMs: row.createdAt.toEpochMilliseconds(),
-      updatedAtMs: row.updatedAt.toEpochMilliseconds(),
-      data: row.data,
+    const portableRecord: PortableRecord = {
+      recordKey: record.recordKey,
+      createdAtMs: record.createdAt.value.toEpochMilliseconds(),
+      updatedAtMs: record.updatedAt.value.toEpochMilliseconds(),
+      data: record.recordData,
     };
 
-    if (row.collections != null && row.collections.size > 0) {
-      serializable.collections = Array.from(row.collections);
+    if (record.tagKeys != null && record.tagKeys.count > 0) {
+      portableRecord.tagKeys = record.tagKeys.toArray();
     }
 
-    if (row.valuesByIndex == null) {
-      row.valuesByIndex = new Map<string, number>();
+    if (record.metricValues == null) {
+      record.metricValues.clear();
     }
 
-    row.valuesByIndex.set("createdAt", row.createdAt.toEpochMilliseconds());
+    record.metricValues.setValue(
+      "createdAt",
+      record.createdAt.value.toEpochMilliseconds()
+    );
 
-    const obj: any = {};
-    for (const [k, v] of row.valuesByIndex) {
-      obj[k] = v;
-    }
-    serializable.valuesByIndex = obj;
+    portableRecord.metricValues = record.metricValues.toValues();
 
-    const changedCollections = new Set<string>();
-    const changedIndexes = new Set<string>();
+    const changedTags = new Set<Tag>();
+    const changedMetrics = new Set<Metric>();
 
-    const keysByCollection = await asyncGivenObservable({
-      observable: this._keysByCollection,
-    });
-    const valuesByKeyByIndex = await asyncGivenObservable({
-      observable: this._valuesByKeyByIndex,
-    });
-    row.collections.forEach((collection) => {
-      if (!keysByCollection.has(collection)) {
-        keysByCollection.set(collection, new Set());
+    record.tagKeys.toArray().forEach((tagKey) => {
+      let tag = this._tags.toOptionalValueGivenKey(tagKey);
+      if (tag == null) {
+        tag = new Tag({
+          tagKey,
+          adapter: this.props.adapters.props.tagsAdapter,
+        });
+        this._tags.setValue(tagKey, tag);
+      }
+
+      if (!tag.recordKeys.hasValue(recordKey)) {
+        tag.recordKeys.addValue(recordKey);
+        changedTags.add(tag);
       }
     });
 
-    for (const index of row.valuesByIndex.keys()) {
-      if (!valuesByKeyByIndex.has(index)) {
-        valuesByKeyByIndex.set(index, new Map());
-      }
-    }
+    const metricKeys = record.metricValues.toKeys();
 
-    for (const [collection, keys] of keysByCollection) {
-      if (row.collections.has(collection)) {
-        if (!keys.has(row.key)) {
-          keys.add(row.key);
-          changedCollections.add(collection);
-        }
-      } else {
-        if (keys.has(row.key)) {
-          keys.delete(row.key);
-          changedCollections.add(collection);
-        }
+    metricKeys.forEach((metricKey) => {
+      let metric = this._metrics.toOptionalValueGivenKey(metricKey);
+      if (metric == null) {
+        metric = new Metric({
+          metricKey,
+          adapter: this.props.adapters.props.metricsAdapter,
+        });
+        this._metrics.setValue(metricKey, metric);
       }
-    }
 
-    for (const [index, valuesByKey] of valuesByKeyByIndex) {
-      const value = row.valuesByIndex.get(index);
-      const currentValue = valuesByKey.get(row.key);
+      const metricValue = record.metricValues.toOptionalValueGivenKey(
+        metricKey
+      );
 
-      if (value != null && value !== currentValue) {
-        valuesByKey.set(row.key, value);
-        changedIndexes.add(index);
-      } else if (value == null && currentValue != null) {
-        valuesByKey.delete(row.key);
-        changedIndexes.add(index);
+      if (
+        metric.recordMetricValues.toOptionalValueGivenKey(recordKey) !==
+        metricValue
+      ) {
+        metric.recordMetricValues.setValue(recordKey, metricValue);
+        changedMetrics.add(metric);
       }
-    }
+    });
 
     await PromiseUtil.asyncSequenceGivenArrayAndCallback(
-      Array.from(changedCollections),
-      async (collectionKey) => {
-        await updateKeysByCollection(
-          this.props.adapters.props.collectionsAdapter,
-          collectionKey,
-          keysByCollection.get(collectionKey)
-        );
+      Array.from(changedTags),
+      async (tag) => {
+        await tag.save();
       }
     );
 
     await PromiseUtil.asyncSequenceGivenArrayAndCallback(
-      Array.from(changedIndexes),
-      async (indexKey) => {
-        await updateValuesByKeyByIndex(
-          this.props.adapters.props.indexesAdapter,
-          indexKey,
-          valuesByKeyByIndex.get(indexKey)
-        );
+      Array.from(changedMetrics),
+      async (metric) => {
+        await metric.save();
       }
     );
 
-    await this.props.adapters.props.dataAdapter.setValue(key, serializable);
+    await this.props.adapters.props.recordsAdapter.writeValue(
+      recordKey,
+      portableRecord
+    );
 
-    return row;
+    return record;
   };
 
-  private _listKeys = async (
+  private _listRecordKeys = async (
     options: FileDbReadOptions = {}
   ): Promise<string[]> => {
-    let result: string[];
+    let recordKeys: string[];
 
-    if (options.filter == null || options.filter.length === 0) {
-      result = await asyncGivenObservable({ observable: this._allKeys });
+    await this.ensureReady();
+
+    if (options.requireTagKeys == null || options.requireTagKeys.length === 0) {
+      recordKeys = this._allRecordKeys.value;
     } else {
-      const keysByCollection = await asyncGivenObservable({
-        observable: this._keysByCollection,
-      });
-      const sets = options.filter.map((collection) => {
-        return keysByCollection.get(collection) || new Set<string>();
+      const sets = options.requireTagKeys.map((tagKey) => {
+        const tag = this._tags.toOptionalValueGivenKey(tagKey);
+        if (tag == null) {
+          return new Set<string>();
+        }
+
+        return tag.recordKeys.toSet();
       });
 
-      result = Array.from(SetUtil.intersectionGivenSets(sets));
+      recordKeys = Array.from(SetUtil.intersectionGivenSets(sets));
     }
 
-    const index = options.orderBy;
-    if (index != null) {
-      const valuesByKeyByIndex = await asyncGivenObservable({
-        observable: this._valuesByKeyByIndex,
-      });
-      const valuesByKey = valuesByKeyByIndex.get(index);
-      if (valuesByKey == null) {
-        throw new Error(`Missing index '${index}'`);
+    const metricKey = options.orderByMetricKey;
+    if (metricKey != null) {
+      const metric = this._metrics.toOptionalValueGivenKey(metricKey);
+      if (metric == null) {
+        throw new Error(`Metric is not defined '${metricKey}'`);
       }
 
-      result = ArrayUtil.arrayWithOrderFromValue(
-        result,
-        (key) => {
-          return valuesByKey.get(key) || 0;
+      recordKeys = ArrayUtil.arrayWithOrderFromValue(
+        recordKeys,
+        (recordKey) => {
+          const metricValue = metric.recordMetricValues.toOptionalValueGivenKey(
+            recordKey
+          );
+          return metricValue || 0;
         },
         "ascending"
       );
     }
 
     let start = 0;
-    let end = result.length;
+    let end = recordKeys.length;
 
     if (options.offset != null) {
       start = parseInt(options.offset as any, 10);
@@ -555,24 +543,27 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
       end = Math.min(end, start + parseInt(options.limit as any, 10));
     }
 
-    return result.slice(start, end);
+    return recordKeys.slice(start, end);
   };
 
-  private _listRows = async (
+  private _listRecords = async (
     options: FileDbReadOptions = {}
-  ): Promise<FileDbRow<T>[]> => {
-    const keys = await this._listKeys(options);
+  ): Promise<DbRecord<T>[]> => {
+    const recordKeys = await this._listRecordKeys(options);
 
-    const results: FileDbRow<T>[] = [];
+    const records: DbRecord<T>[] = [];
 
-    await PromiseUtil.asyncSequenceGivenArrayAndCallback(keys, async (key) => {
-      const result = await this._read(key);
-      if (result != null) {
-        results.push(result);
+    await PromiseUtil.asyncSequenceGivenArrayAndCallback(
+      recordKeys,
+      async (recordKey) => {
+        const result = await this._readRecord(recordKey);
+        if (result != null) {
+          records.push(result);
+        }
       }
-    });
+    );
 
-    return results;
+    return records;
   };
 
   private _nextInstruction = async (): Promise<void> => {
@@ -584,7 +575,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     try {
       switch (instruction.type) {
         case "write":
-          const writeResult: FileDbRow<T> = await this._write(
+          const writeResult: DbRecord<T> = await this._writeRecord(
             instruction.data,
             instruction.time,
             instruction.key
@@ -592,21 +583,23 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
           instruction.resolve(writeResult);
           break;
         case "read":
-          const readResult: FileDbRow<T> | undefined = await this._read(
+          const readResult: DbRecord<T> | undefined = await this._readRecord(
             instruction.key
           );
           instruction.resolve(readResult);
           break;
         case "delete":
-          await this._delete(instruction.key);
+          await this._deleteRecord(instruction.key);
           instruction.resolve();
           break;
-        case "listKeys":
-          const listKeysResult = await this._listKeys(instruction.options);
+        case "listRecordKeys":
+          const listKeysResult = await this._listRecordKeys(
+            instruction.options
+          );
           instruction.resolve(listKeysResult);
           break;
-        case "listRows":
-          const listRowsResult = await this._listRows(instruction.options);
+        case "listRecords":
+          const listRowsResult = await this._listRecords(instruction.options);
           instruction.resolve(listRowsResult);
           break;
       }

@@ -9,31 +9,31 @@ class MemoryAdapter extends skytree_1.Actor {
     }
     async toKeys() {
         if (this.isActive.value == false) {
-            throw new Error("MemoryAdapter is not active");
+            return undefined;
         }
         return Array.from(this._data.keys());
     }
     async toValues() {
         if (this.isActive.value == false) {
-            throw new Error("MemoryAdapter is not active");
+            return undefined;
         }
         return Array.from(this._data.values());
     }
-    async toOptionalValue(key) {
+    async toOptionalValueGivenKey(key) {
         if (this.isActive.value == false) {
-            throw new Error("MemoryAdapter is not active");
+            return undefined;
         }
         return this._data.get(key);
     }
-    async setValue(key, value) {
+    async writeValue(key, value) {
         if (this.isActive.value == false) {
-            throw new Error("MemoryAdapter is not active");
+            return;
         }
         this._data.set(key, value);
     }
     async deleteKey(key) {
         if (this.isActive.value == false) {
-            throw new Error("MemoryAdapter is not active");
+            return;
         }
         this._data.delete(key);
     }

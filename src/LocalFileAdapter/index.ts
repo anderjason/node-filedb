@@ -44,7 +44,7 @@ export class LocalFileAdapter<T>
     return result;
   }
 
-  async toOptionalValue(key: string): Promise<T> {
+  async toOptionalValueGivenKey(key: string): Promise<T> {
     const file = this.fileGivenKey(key);
     const isAccessible = await file.isAccessible();
     if (!isAccessible) {
@@ -55,7 +55,7 @@ export class LocalFileAdapter<T>
     return this.props.valueGivenBuffer(buffer);
   }
 
-  async setValue(key: string, value: T): Promise<void> {
+  async writeValue(key: string, value: T): Promise<void> {
     const file = this.fileGivenKey(key);
     await file.toDirectory().createDirectory();
 

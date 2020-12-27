@@ -1,61 +1,48 @@
 import { Actor } from "skytree";
-import { Instant } from "@anderjason/time";
+import { Metric } from "./Metric";
+import { Tag } from "./Tag";
 import { FileDbAdapters } from "../FileDbAdapters";
-import { ReadOnlyObservable } from "@anderjason/observable";
-export interface FileDbRow<T> {
-    key: string;
-    createdAt: Instant;
-    updatedAt: Instant;
-    data: T;
-    collections: Set<string>;
-    valuesByIndex: Map<string, number>;
-}
-export interface SerializableFileDbCollection {
-    collection: string;
-    keys: string[];
-}
-export interface SerializableFileDbIndex {
-    index: string;
-    valuesByKey: {
-        [key: string]: number;
-    };
-}
+import { Dict, ReadOnlyObservable } from "@anderjason/observable";
+import { DbRecord } from "./DbRecord";
 export interface FileDbReadOptions {
-    filter?: string[];
-    orderBy?: string;
+    requireTagKeys?: string[];
+    orderByMetricKey?: string;
     limit?: number;
     offset?: number;
 }
 export interface FileDbProps<T> {
     adapters: FileDbAdapters;
-    collectionsGivenData: (data: T) => Set<string>;
-    valuesByIndexGivenData: (data: T) => Map<string, number>;
+    tagKeysGivenRecordData: (data: T) => Set<string>;
+    metricsGivenRecordData: (data: T) => Dict<number>;
     cacheSize?: number;
 }
 export declare class FileDb<T> extends Actor<FileDbProps<T>> {
     private _isReady;
     readonly isReady: ReadOnlyObservable<boolean>;
-    private _rowCache;
-    private _keysByCollection;
-    private _valuesByKeyByIndex;
-    private _allKeys;
+    private _recordCache;
+    private _tags;
+    private _metrics;
+    private _allRecordKeys;
     private _instructions;
     constructor(props: FileDbProps<T>);
     onActivate(): void;
-    toCollections(): Promise<string[]>;
-    toKeys(options?: FileDbReadOptions): Promise<string[]>;
-    hasKey(key: string): Promise<boolean>;
-    toCount(filter?: string[]): Promise<number>;
-    toRows(options?: FileDbReadOptions): Promise<FileDbRow<T>[]>;
-    toOptionalFirstRow(options?: FileDbReadOptions): Promise<FileDbRow<T> | undefined>;
-    toRow(key: string): Promise<FileDbRow<T>>;
-    toOptionalRowGivenKey(key: string): Promise<FileDbRow<T> | undefined>;
-    writeRow(data: T, key?: string): Promise<FileDbRow<T>>;
-    deleteKey(key: string): Promise<void>;
-    private _delete;
-    private _read;
-    private _write;
-    private _listKeys;
-    private _listRows;
+    get tags(): Tag[];
+    get metrics(): Metric[];
+    private load;
+    toRecordKeys(options?: FileDbReadOptions): Promise<string[]>;
+    hasRecord(recordKey: string): Promise<boolean>;
+    toRecordCount(requireTagKeys?: string[]): Promise<number>;
+    toRecords(options?: FileDbReadOptions): Promise<DbRecord<T>[]>;
+    toOptionalFirstRecord(options?: FileDbReadOptions): Promise<DbRecord<T> | undefined>;
+    toRecordGivenKey(recordKey: string): Promise<DbRecord<T>>;
+    toOptionalRecordGivenKey(recordKey: string): Promise<DbRecord<T> | undefined>;
+    writeRecord(recordData: T, recordKey?: string): Promise<DbRecord<T>>;
+    deleteKey(recordKey: string): Promise<void>;
+    ensureReady(): Promise<void>;
+    private _deleteRecord;
+    private _readRecord;
+    private _writeRecord;
+    private _listRecordKeys;
+    private _listRecords;
     private _nextInstruction;
 }

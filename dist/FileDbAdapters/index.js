@@ -8,9 +8,9 @@ const MemoryAdapter_1 = require("../MemoryAdapter");
 class FileDbAdapters extends skytree_1.Actor {
     static ofMemory() {
         return new FileDbAdapters({
-            collectionsAdapter: new MemoryAdapter_1.MemoryAdapter(),
-            dataAdapter: new MemoryAdapter_1.MemoryAdapter(),
-            indexesAdapter: new MemoryAdapter_1.MemoryAdapter(),
+            tagsAdapter: new MemoryAdapter_1.MemoryAdapter(),
+            recordsAdapter: new MemoryAdapter_1.MemoryAdapter(),
+            metricsAdapter: new MemoryAdapter_1.MemoryAdapter(),
         });
     }
     static givenDirectory(directory) {
@@ -21,17 +21,17 @@ class FileDbAdapters extends skytree_1.Actor {
             return Buffer.from(JSON.stringify(value));
         };
         return new FileDbAdapters({
-            collectionsAdapter: new LocalFileAdapter_1.LocalFileAdapter({
+            tagsAdapter: new LocalFileAdapter_1.LocalFileAdapter({
                 directory: node_filesystem_1.LocalDirectory.givenRelativePath(directory, "collections"),
                 bufferGivenValue,
                 valueGivenBuffer,
             }),
-            dataAdapter: new LocalFileAdapter_1.LocalFileAdapter({
+            recordsAdapter: new LocalFileAdapter_1.LocalFileAdapter({
                 directory: node_filesystem_1.LocalDirectory.givenRelativePath(directory, "data"),
                 bufferGivenValue,
                 valueGivenBuffer,
             }),
-            indexesAdapter: new LocalFileAdapter_1.LocalFileAdapter({
+            metricsAdapter: new LocalFileAdapter_1.LocalFileAdapter({
                 directory: node_filesystem_1.LocalDirectory.givenRelativePath(directory, "indexes"),
                 bufferGivenValue,
                 valueGivenBuffer,
@@ -39,9 +39,9 @@ class FileDbAdapters extends skytree_1.Actor {
         });
     }
     onActivate() {
-        this.addActor(this.props.collectionsAdapter);
-        this.addActor(this.props.dataAdapter);
-        this.addActor(this.props.indexesAdapter);
+        this.addActor(this.props.tagsAdapter);
+        this.addActor(this.props.recordsAdapter);
+        this.addActor(this.props.metricsAdapter);
     }
 }
 exports.FileDbAdapters = FileDbAdapters;

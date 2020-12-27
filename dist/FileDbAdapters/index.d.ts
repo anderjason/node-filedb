@@ -1,36 +1,38 @@
 import { LocalDirectory } from "@anderjason/node-filesystem";
 import { Actor } from "skytree";
+export declare type MetricValue = number;
 export interface FileDbAdapter<T> extends Actor {
     toKeys(): Promise<string[]>;
     toValues(): Promise<T[]>;
-    toOptionalValue(key: string): Promise<T>;
-    setValue(key: string, value: T): Promise<void>;
+    toOptionalValueGivenKey(key: string): Promise<T>;
+    writeValue(key: string, value: T): Promise<void>;
     deleteKey(key: string): Promise<void>;
 }
-export interface PortableCollection {
-    collection: string;
-    keys: string[];
+export interface PortableTag {
+    tagKey: string;
+    recordKeys: string[];
 }
-export interface PortableIndex {
-    index: string;
-    valuesByKey: {
-        [key: string]: number;
-    };
+export interface PortableRecordMetricValues {
+    [recordKey: string]: MetricValue;
 }
-export interface PortableRow {
-    key: string;
+export interface PortableMetric {
+    metricKey: string;
+    recordMetricValues: PortableRecordMetricValues;
+}
+export interface PortableRecord {
+    recordKey: string;
     createdAtMs: number;
     updatedAtMs: number;
     data: any;
-    collections?: string[];
-    valuesByIndex?: {
-        [index: string]: number;
+    tagKeys?: string[];
+    metricValues?: {
+        [metricKey: string]: number;
     };
 }
 interface FileDbAdaptersProps {
-    collectionsAdapter: FileDbAdapter<PortableCollection>;
-    dataAdapter: FileDbAdapter<PortableRow>;
-    indexesAdapter: FileDbAdapter<PortableIndex>;
+    tagsAdapter: FileDbAdapter<PortableTag>;
+    recordsAdapter: FileDbAdapter<PortableRecord>;
+    metricsAdapter: FileDbAdapter<PortableMetric>;
 }
 export declare class FileDbAdapters extends Actor<FileDbAdaptersProps> {
     static ofMemory(): FileDbAdapters;

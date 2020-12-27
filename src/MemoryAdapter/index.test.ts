@@ -5,9 +5,9 @@ Test.define("MemoryAdapter can write and read a string", async () => {
   const adapter = new MemoryAdapter<string>();
   adapter.activate();
 
-  await adapter.setValue("message", "hello world");
+  await adapter.writeValue("message", "hello world");
 
-  const actual = await adapter.toOptionalValue("message");
+  const actual = await adapter.toOptionalValueGivenKey("message");
   Test.assertIsEqual(actual, "hello world");
 
   adapter.deactivate();

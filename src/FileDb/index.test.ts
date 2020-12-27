@@ -1,3 +1,4 @@
+import { Dict } from "@anderjason/observable";
 import { Test } from "@anderjason/tests";
 import { FileDb } from ".";
 import { FileDbAdapters } from "../FileDbAdapters";
@@ -5,8 +6,8 @@ import { FileDbAdapters } from "../FileDbAdapters";
 Test.define("FileDb can be created", () => {
   const fileDb = new FileDb({
     adapters: FileDbAdapters.ofMemory(),
-    collectionsGivenData: (data) => new Set(),
-    valuesByIndexGivenData: (data) => new Map(),
+    tagKeysGivenRecordData: (data) => new Set(),
+    metricsGivenRecordData: (data) => ({}),
   });
   fileDb.activate();
 
@@ -16,24 +17,22 @@ Test.define("FileDb can be created", () => {
 Test.define("FileDb can write and read a row", async () => {
   const fileDb = new FileDb<any>({
     adapters: FileDbAdapters.ofMemory(),
-    collectionsGivenData: (data) => new Set(),
-    valuesByIndexGivenData: (data) => new Map(),
+    tagKeysGivenRecordData: (data) => new Set(),
+    metricsGivenRecordData: (data) => ({}),
   });
   fileDb.activate();
 
-  const row = await fileDb.writeRow({
+  const row = await fileDb.writeRecord({
     message: "hello world",
   });
 
-  Test.assert(row.key != null);
-  Test.assert(row.key.length == 36);
+  Test.assert(row.recordKey != null);
+  Test.assert(row.recordKey.length == 36);
   Test.assert(row.createdAt != null);
   Test.assert(row.updatedAt != null);
-  Test.assert(row.data.message === "hello world");
-  Test.assert(row.collections != null);
-  Test.assert(row.valuesByIndex != null);
+  Test.assert(row.recordData.value.message === "hello world");
 
-  const result = await fileDb.toRow(row.key);
+  const result = await fileDb.toRecordGivenKey(row.recordKey);
   Test.assertIsDeepEqual(result, row);
 
   fileDb.deactivate();
@@ -42,7 +41,7 @@ Test.define("FileDb can write and read a row", async () => {
 Test.define("FileDb can assign rows to collections", async () => {
   const fileDb = new FileDb<any>({
     adapters: FileDbAdapters.ofMemory(),
-    collectionsGivenData: (data) => {
+    tagKeysGivenRecordData: (data) => {
       const result = new Set<string>();
 
       result.add("testset1");
@@ -50,16 +49,16 @@ Test.define("FileDb can assign rows to collections", async () => {
 
       return result;
     },
-    valuesByIndexGivenData: (data) => new Map(),
+    metricsGivenRecordData: (data) => ({}),
   });
   fileDb.activate();
 
-  const row = await fileDb.writeRow({
+  const row = await fileDb.writeRecord({
     message: "hello world",
   });
 
-  Test.assert(row.collections.has("testset1"));
-  Test.assert(row.collections.has("testset2"));
+  Test.assert(row.tagKeys.hasValue("testset1"));
+  Test.assert(row.tagKeys.hasValue("testset2"));
 
   fileDb.deactivate();
 });
@@ -67,24 +66,24 @@ Test.define("FileDb can assign rows to collections", async () => {
 Test.define("FileDb can assign values by index", async () => {
   const fileDb = new FileDb<any>({
     adapters: FileDbAdapters.ofMemory(),
-    collectionsGivenData: (data) => new Set(),
-    valuesByIndexGivenData: (data) => {
-      const result = new Map<string, number>();
+    tagKeysGivenRecordData: (data) => new Set(),
+    metricsGivenRecordData: (data) => {
+      const result: Dict<number> = {};
 
-      result.set("size", 5);
-      result.set("views", 23);
+      result.size = 5;
+      result.views = 23;
 
       return result;
     },
   });
   fileDb.activate();
 
-  const row = await fileDb.writeRow({
+  const row = await fileDb.writeRecord({
     message: "hello world",
   });
 
-  Test.assert(row.valuesByIndex.get("size") === 5);
-  Test.assert(row.valuesByIndex.get("views") === 23);
+  Test.assert(row.metricValues.toOptionalValueGivenKey("size") === 5);
+  Test.assert(row.metricValues.toOptionalValueGivenKey("views") === 23);
 
   fileDb.deactivate();
 });

@@ -6,7 +6,7 @@ export class MemoryAdapter<T> extends Actor<void> implements FileDbAdapter<T> {
 
   async toKeys(): Promise<string[]> {
     if (this.isActive.value == false) {
-      throw new Error("MemoryAdapter is not active");
+      return undefined;
     }
 
     return Array.from(this._data.keys());
@@ -14,23 +14,23 @@ export class MemoryAdapter<T> extends Actor<void> implements FileDbAdapter<T> {
 
   async toValues(): Promise<T[]> {
     if (this.isActive.value == false) {
-      throw new Error("MemoryAdapter is not active");
+      return undefined;
     }
 
     return Array.from(this._data.values());
   }
 
-  async toOptionalValue(key: string): Promise<T> {
+  async toOptionalValueGivenKey(key: string): Promise<T> {
     if (this.isActive.value == false) {
-      throw new Error("MemoryAdapter is not active");
+      return undefined;
     }
 
     return this._data.get(key);
   }
 
-  async setValue(key: string, value: T): Promise<void> {
+  async writeValue(key: string, value: T): Promise<void> {
     if (this.isActive.value == false) {
-      throw new Error("MemoryAdapter is not active");
+      return;
     }
 
     this._data.set(key, value);
@@ -38,7 +38,7 @@ export class MemoryAdapter<T> extends Actor<void> implements FileDbAdapter<T> {
 
   async deleteKey(key: string): Promise<void> {
     if (this.isActive.value == false) {
-      throw new Error("MemoryAdapter is not active");
+      return;
     }
 
     this._data.delete(key);

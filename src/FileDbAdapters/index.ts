@@ -3,50 +3,54 @@ import { Actor } from "skytree";
 import { LocalFileAdapter } from "../LocalFileAdapter";
 import { MemoryAdapter } from "../MemoryAdapter";
 
+export type MetricValue = number;
+
 export interface FileDbAdapter<T> extends Actor {
   toKeys(): Promise<string[]>;
   toValues(): Promise<T[]>;
-  toOptionalValue(key: string): Promise<T>;
-  setValue(key: string, value: T): Promise<void>;
+  toOptionalValueGivenKey(key: string): Promise<T>;
+  writeValue(key: string, value: T): Promise<void>;
   deleteKey(key: string): Promise<void>;
 }
 
-export interface PortableCollection {
-  collection: string;
-  keys: string[];
+export interface PortableTag {
+  tagKey: string;
+  recordKeys: string[];
 }
 
-export interface PortableIndex {
-  index: string;
-  valuesByKey: {
-    [key: string]: number;
-  };
+export interface PortableRecordMetricValues {
+  [recordKey: string]: MetricValue;
 }
 
-export interface PortableRow {
-  key: string;
+export interface PortableMetric {
+  metricKey: string;
+  recordMetricValues: PortableRecordMetricValues;
+}
+
+export interface PortableRecord {
+  recordKey: string;
   createdAtMs: number;
   updatedAtMs: number;
   data: any;
 
-  collections?: string[];
-  valuesByIndex?: {
-    [index: string]: number;
+  tagKeys?: string[];
+  metricValues?: {
+    [metricKey: string]: number;
   };
 }
 
 interface FileDbAdaptersProps {
-  collectionsAdapter: FileDbAdapter<PortableCollection>;
-  dataAdapter: FileDbAdapter<PortableRow>;
-  indexesAdapter: FileDbAdapter<PortableIndex>;
+  tagsAdapter: FileDbAdapter<PortableTag>;
+  recordsAdapter: FileDbAdapter<PortableRecord>;
+  metricsAdapter: FileDbAdapter<PortableMetric>;
 }
 
 export class FileDbAdapters extends Actor<FileDbAdaptersProps> {
   static ofMemory(): FileDbAdapters {
     return new FileDbAdapters({
-      collectionsAdapter: new MemoryAdapter(),
-      dataAdapter: new MemoryAdapter(),
-      indexesAdapter: new MemoryAdapter(),
+      tagsAdapter: new MemoryAdapter(),
+      recordsAdapter: new MemoryAdapter(),
+      metricsAdapter: new MemoryAdapter(),
     });
   }
 
@@ -60,17 +64,17 @@ export class FileDbAdapters extends Actor<FileDbAdaptersProps> {
     };
 
     return new FileDbAdapters({
-      collectionsAdapter: new LocalFileAdapter({
+      tagsAdapter: new LocalFileAdapter({
         directory: LocalDirectory.givenRelativePath(directory, "collections"),
         bufferGivenValue,
         valueGivenBuffer,
       }),
-      dataAdapter: new LocalFileAdapter({
+      recordsAdapter: new LocalFileAdapter({
         directory: LocalDirectory.givenRelativePath(directory, "data"),
         bufferGivenValue,
         valueGivenBuffer,
       }),
-      indexesAdapter: new LocalFileAdapter({
+      metricsAdapter: new LocalFileAdapter({
         directory: LocalDirectory.givenRelativePath(directory, "indexes"),
         bufferGivenValue,
         valueGivenBuffer,
@@ -79,8 +83,8 @@ export class FileDbAdapters extends Actor<FileDbAdaptersProps> {
   }
 
   onActivate() {
-    this.addActor(this.props.collectionsAdapter);
-    this.addActor(this.props.dataAdapter);
-    this.addActor(this.props.indexesAdapter);
+    this.addActor(this.props.tagsAdapter);
+    this.addActor(this.props.recordsAdapter);
+    this.addActor(this.props.metricsAdapter);
   }
 }

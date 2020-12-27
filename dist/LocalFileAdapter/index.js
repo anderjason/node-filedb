@@ -25,7 +25,7 @@ class LocalFileAdapter extends skytree_1.Actor {
         });
         return result;
     }
-    async toOptionalValue(key) {
+    async toOptionalValueGivenKey(key) {
         const file = this.fileGivenKey(key);
         const isAccessible = await file.isAccessible();
         if (!isAccessible) {
@@ -34,7 +34,7 @@ class LocalFileAdapter extends skytree_1.Actor {
         const buffer = await file.toContentBuffer();
         return this.props.valueGivenBuffer(buffer);
     }
-    async setValue(key, value) {
+    async writeValue(key, value) {
         const file = this.fileGivenKey(key);
         await file.toDirectory().createDirectory();
         const buffer = this.props.bufferGivenValue(value);
