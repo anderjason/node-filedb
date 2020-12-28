@@ -1,10 +1,10 @@
 /// <reference types="node" />
 import { LocalDirectory } from "@anderjason/node-filesystem";
 import { Actor } from "skytree";
-import { FileDbAdapter } from "../FileDbAdapters";
+import { FileDbAdapter, PortableValueResult } from "../FileDbAdapters";
 export interface LocalFileAdapterProps<T> {
     directory: LocalDirectory;
-    valueGivenBuffer: (buffer: Buffer) => T;
+    valueGivenBuffer: (buffer: Buffer) => PortableValueResult<T>;
     bufferGivenValue: (value: T) => Buffer;
 }
 export declare class LocalFileAdapter<T> extends Actor<LocalFileAdapterProps<T>> implements FileDbAdapter<T> {

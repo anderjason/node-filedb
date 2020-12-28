@@ -1,11 +1,11 @@
 import { LocalDirectory, LocalFile } from "@anderjason/node-filesystem";
 import { PromiseUtil } from "@anderjason/util";
 import { Actor } from "skytree";
-import { FileDbAdapter } from "../FileDbAdapters";
+import { FileDbAdapter, PortableValueResult } from "../FileDbAdapters";
 
 export interface LocalFileAdapterProps<T> {
   directory: LocalDirectory;
-  valueGivenBuffer: (buffer: Buffer) => T;
+  valueGivenBuffer: (buffer: Buffer) => PortableValueResult<T>;
   bufferGivenValue: (value: T) => Buffer;
 }
 
@@ -35,8 +35,15 @@ export class LocalFileAdapter<T>
     const result = await PromiseUtil.asyncValuesGivenArrayAndConverter(
       files,
       async (file) => {
-        const buffer = await file.toContentBuffer();
-        return this.props.valueGivenBuffer(buffer);
+        let buffer = await file.toContentBuffer();
+        const portableValueResult = this.props.valueGivenBuffer(buffer);
+
+        if (portableValueResult.shouldRewriteStorage == true) {
+          buffer = this.props.bufferGivenValue(portableValueResult.value);
+          await file.writeFile(buffer);
+        }
+
+        return portableValueResult.value;
       }
     );
 
@@ -50,8 +57,15 @@ export class LocalFileAdapter<T>
       return undefined;
     }
 
-    const buffer = await file.toContentBuffer();
-    return this.props.valueGivenBuffer(buffer);
+    let buffer = await file.toContentBuffer();
+    const portableValueResult = this.props.valueGivenBuffer(buffer);
+
+    if (portableValueResult.shouldRewriteStorage == true) {
+      buffer = this.props.bufferGivenValue(portableValueResult.value);
+      await file.writeFile(buffer);
+    }
+
+    return portableValueResult.value;
   }
 
   async writeValue(key: string, value: T): Promise<void> {

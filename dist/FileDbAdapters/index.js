@@ -5,6 +5,12 @@ const node_filesystem_1 = require("@anderjason/node-filesystem");
 const skytree_1 = require("skytree");
 const LocalFileAdapter_1 = require("../LocalFileAdapter");
 const MemoryAdapter_1 = require("../MemoryAdapter");
+const bufferGivenPortableEntry_1 = require("./_internal/bufferGivenPortableEntry");
+const bufferGivenPortableMetric_1 = require("./_internal/bufferGivenPortableMetric");
+const bufferGivenPortableTag_1 = require("./_internal/bufferGivenPortableTag");
+const portableEntryResultGivenBuffer_1 = require("./_internal/portableEntryResultGivenBuffer");
+const portableMetricResultGivenBuffer_1 = require("./_internal/portableMetricResultGivenBuffer");
+const portableTagResultGivenBuffer_1 = require("./_internal/portableTagResultGivenBuffer");
 class FileDbAdapters extends skytree_1.Actor {
     static ofMemory() {
         return new FileDbAdapters({
@@ -14,27 +20,21 @@ class FileDbAdapters extends skytree_1.Actor {
         });
     }
     static givenDirectory(directory) {
-        const valueGivenBuffer = (buffer) => {
-            return JSON.parse(buffer.toString());
-        };
-        const bufferGivenValue = (value) => {
-            return Buffer.from(JSON.stringify(value));
-        };
         return new FileDbAdapters({
             tagsAdapter: new LocalFileAdapter_1.LocalFileAdapter({
                 directory: node_filesystem_1.LocalDirectory.givenRelativePath(directory, "tags"),
-                bufferGivenValue,
-                valueGivenBuffer,
+                bufferGivenValue: bufferGivenPortableTag_1.bufferGivenPortableTag,
+                valueGivenBuffer: portableTagResultGivenBuffer_1.portableTagResultGivenBuffer,
             }),
             entriesAdapter: new LocalFileAdapter_1.LocalFileAdapter({
-                directory: node_filesystem_1.LocalDirectory.givenRelativePath(directory, "data"),
-                bufferGivenValue,
-                valueGivenBuffer,
+                directory: node_filesystem_1.LocalDirectory.givenRelativePath(directory, "entries"),
+                bufferGivenValue: bufferGivenPortableEntry_1.bufferGivenPortableEntry,
+                valueGivenBuffer: portableEntryResultGivenBuffer_1.portableEntryResultGivenBuffer,
             }),
             metricsAdapter: new LocalFileAdapter_1.LocalFileAdapter({
                 directory: node_filesystem_1.LocalDirectory.givenRelativePath(directory, "metrics"),
-                bufferGivenValue,
-                valueGivenBuffer,
+                bufferGivenValue: bufferGivenPortableMetric_1.bufferGivenPortableMetric,
+                valueGivenBuffer: portableMetricResultGivenBuffer_1.portableMetricResultGivenBuffer,
             }),
         });
     }

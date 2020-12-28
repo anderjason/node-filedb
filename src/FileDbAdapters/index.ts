@@ -3,6 +3,17 @@ import { Actor } from "skytree";
 import { PortableTag, PortableEntry, PortableMetric } from "../FileDb/Types";
 import { LocalFileAdapter } from "../LocalFileAdapter";
 import { MemoryAdapter } from "../MemoryAdapter";
+import { bufferGivenPortableEntry } from "./_internal/bufferGivenPortableEntry";
+import { bufferGivenPortableMetric } from "./_internal/bufferGivenPortableMetric";
+import { bufferGivenPortableTag } from "./_internal/bufferGivenPortableTag";
+import { portableEntryResultGivenBuffer } from "./_internal/portableEntryResultGivenBuffer";
+import { portableMetricResultGivenBuffer } from "./_internal/portableMetricResultGivenBuffer";
+import { portableTagResultGivenBuffer } from "./_internal/portableTagResultGivenBuffer";
+
+export interface PortableValueResult<T> {
+  value: T;
+  shouldRewriteStorage: boolean;
+}
 
 export interface FileDbAdapter<T> extends Actor {
   toKeys(): Promise<string[]>;
@@ -28,29 +39,21 @@ export class FileDbAdapters extends Actor<FileDbAdaptersProps> {
   }
 
   static givenDirectory(directory: LocalDirectory): FileDbAdapters {
-    const valueGivenBuffer = (buffer: Buffer): any => {
-      return JSON.parse(buffer.toString());
-    };
-
-    const bufferGivenValue = (value: any): Buffer => {
-      return Buffer.from(JSON.stringify(value));
-    };
-
     return new FileDbAdapters({
-      tagsAdapter: new LocalFileAdapter({
+      tagsAdapter: new LocalFileAdapter<PortableTag>({
         directory: LocalDirectory.givenRelativePath(directory, "tags"),
-        bufferGivenValue,
-        valueGivenBuffer,
+        bufferGivenValue: bufferGivenPortableTag,
+        valueGivenBuffer: portableTagResultGivenBuffer,
       }),
-      entriesAdapter: new LocalFileAdapter({
-        directory: LocalDirectory.givenRelativePath(directory, "data"),
-        bufferGivenValue,
-        valueGivenBuffer,
+      entriesAdapter: new LocalFileAdapter<PortableEntry>({
+        directory: LocalDirectory.givenRelativePath(directory, "entries"),
+        bufferGivenValue: bufferGivenPortableEntry,
+        valueGivenBuffer: portableEntryResultGivenBuffer,
       }),
-      metricsAdapter: new LocalFileAdapter({
+      metricsAdapter: new LocalFileAdapter<PortableMetric>({
         directory: LocalDirectory.givenRelativePath(directory, "metrics"),
-        bufferGivenValue,
-        valueGivenBuffer,
+        bufferGivenValue: bufferGivenPortableMetric,
+        valueGivenBuffer: portableMetricResultGivenBuffer,
       }),
     });
   }

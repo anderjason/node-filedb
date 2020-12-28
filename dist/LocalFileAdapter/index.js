@@ -20,8 +20,13 @@ class LocalFileAdapter extends skytree_1.Actor {
             return file.hasExtension([".json"]);
         });
         const result = await util_1.PromiseUtil.asyncValuesGivenArrayAndConverter(files, async (file) => {
-            const buffer = await file.toContentBuffer();
-            return this.props.valueGivenBuffer(buffer);
+            let buffer = await file.toContentBuffer();
+            const portableValueResult = this.props.valueGivenBuffer(buffer);
+            if (portableValueResult.shouldRewriteStorage == true) {
+                buffer = this.props.bufferGivenValue(portableValueResult.value);
+                await file.writeFile(buffer);
+            }
+            return portableValueResult.value;
         });
         return result;
     }
@@ -31,8 +36,13 @@ class LocalFileAdapter extends skytree_1.Actor {
         if (!isAccessible) {
             return undefined;
         }
-        const buffer = await file.toContentBuffer();
-        return this.props.valueGivenBuffer(buffer);
+        let buffer = await file.toContentBuffer();
+        const portableValueResult = this.props.valueGivenBuffer(buffer);
+        if (portableValueResult.shouldRewriteStorage == true) {
+            buffer = this.props.bufferGivenValue(portableValueResult.value);
+            await file.writeFile(buffer);
+        }
+        return portableValueResult.value;
     }
     async writeValue(key, value) {
         const file = this.fileGivenKey(key);
