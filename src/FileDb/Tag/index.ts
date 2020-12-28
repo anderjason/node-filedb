@@ -1,7 +1,8 @@
 import { UnsaltedHash } from "@anderjason/node-crypto";
 import { ObservableSet } from "@anderjason/observable";
-import { FileDbAdapter, PortableTag } from "../../FileDbAdapters";
+import { FileDbAdapter } from "../../FileDbAdapters";
 import { PropsObject } from "../../PropsObject";
+import { PortableTag } from "../Types";
 
 export interface TagProps {
   tagKey: string;
@@ -9,14 +10,14 @@ export interface TagProps {
 }
 
 export class Tag extends PropsObject<TagProps> {
-  readonly recordKeys = ObservableSet.ofEmpty<string>();
+  readonly entryKeys = ObservableSet.ofEmpty<string>();
 
   async load(): Promise<void> {
     const portableTag = await this.props.adapter.toOptionalValueGivenKey(
       this.props.tagKey
     );
 
-    this.recordKeys.sync(portableTag.recordKeys);
+    this.entryKeys.sync(portableTag.entryKeys);
   }
 
   async save(): Promise<void> {
@@ -24,10 +25,10 @@ export class Tag extends PropsObject<TagProps> {
       .toHashedString()
       .slice(0, 24);
 
-    if (this.recordKeys.count > 0) {
+    if (this.entryKeys.count > 0) {
       const contents = {
         tagKey: this.props.tagKey,
-        recordKeys: this.recordKeys.toArray(),
+        entryKeys: this.entryKeys.toArray(),
       };
 
       await this.props.adapter.writeValue(hash, contents);

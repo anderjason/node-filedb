@@ -7,20 +7,20 @@ const PropsObject_1 = require("../../PropsObject");
 class Tag extends PropsObject_1.PropsObject {
     constructor() {
         super(...arguments);
-        this.recordKeys = observable_1.ObservableSet.ofEmpty();
+        this.entryKeys = observable_1.ObservableSet.ofEmpty();
     }
     async load() {
         const portableTag = await this.props.adapter.toOptionalValueGivenKey(this.props.tagKey);
-        this.recordKeys.sync(portableTag.recordKeys);
+        this.entryKeys.sync(portableTag.entryKeys);
     }
     async save() {
         const hash = node_crypto_1.UnsaltedHash.givenUnhashedString(this.props.tagKey)
             .toHashedString()
             .slice(0, 24);
-        if (this.recordKeys.count > 0) {
+        if (this.entryKeys.count > 0) {
             const contents = {
                 tagKey: this.props.tagKey,
-                recordKeys: this.recordKeys.toArray(),
+                entryKeys: this.entryKeys.toArray(),
             };
             await this.props.adapter.writeValue(hash, contents);
         }

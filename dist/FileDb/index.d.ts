@@ -1,9 +1,9 @@
 import { Actor } from "skytree";
 import { Metric } from "./Metric";
 import { Tag } from "./Tag";
+import { Entry } from "./Entry";
 import { FileDbAdapters } from "../FileDbAdapters";
 import { Dict, ReadOnlyObservable } from "@anderjason/observable";
-import { DbRecord } from "./DbRecord";
 export interface FileDbReadOptions {
     requireTagKeys?: string[];
     orderByMetricKey?: string;
@@ -12,36 +12,36 @@ export interface FileDbReadOptions {
 }
 export interface FileDbProps<T> {
     adapters: FileDbAdapters;
-    tagKeysGivenRecordData: (data: T) => Set<string>;
-    metricsGivenRecordData: (data: T) => Dict<number>;
+    tagKeysGivenEntryData: (data: T) => Set<string>;
+    metricsGivenEntryData: (data: T) => Dict<number>;
     cacheSize?: number;
 }
 export declare class FileDb<T> extends Actor<FileDbProps<T>> {
     private _isReady;
     readonly isReady: ReadOnlyObservable<boolean>;
-    private _recordCache;
+    private _entryCache;
     private _tags;
     private _metrics;
-    private _allRecordKeys;
+    private _allEntryKeys;
     private _instructions;
     constructor(props: FileDbProps<T>);
     onActivate(): void;
     get tags(): Tag[];
     get metrics(): Metric[];
     private load;
-    toRecordKeys(options?: FileDbReadOptions): Promise<string[]>;
-    hasRecord(recordKey: string): Promise<boolean>;
-    toRecordCount(requireTagKeys?: string[]): Promise<number>;
-    toRecords(options?: FileDbReadOptions): Promise<DbRecord<T>[]>;
-    toOptionalFirstRecord(options?: FileDbReadOptions): Promise<DbRecord<T> | undefined>;
-    toRecordGivenKey(recordKey: string): Promise<DbRecord<T>>;
-    toOptionalRecordGivenKey(recordKey: string): Promise<DbRecord<T> | undefined>;
-    writeRecord(recordData: T, recordKey?: string): Promise<DbRecord<T>>;
-    deleteKey(recordKey: string): Promise<void>;
+    toEntryKeys(options?: FileDbReadOptions): Promise<string[]>;
+    hasEntry(entryKey: string): Promise<boolean>;
+    toEntryCount(requireTagKeys?: string[]): Promise<number>;
+    toEntries(options?: FileDbReadOptions): Promise<Entry<T>[]>;
+    toOptionalFirstEntry(options?: FileDbReadOptions): Promise<Entry<T> | undefined>;
+    toEntryGivenKey(entryKey: string): Promise<Entry<T>>;
+    toOptionalEntryGivenKey(entryKey: string): Promise<Entry<T> | undefined>;
+    writeEntry(entryData: T, entryKey?: string): Promise<Entry<T>>;
+    deleteEntryKey(entryKey: string): Promise<void>;
     ensureReady(): Promise<void>;
-    private _deleteRecord;
-    private _readRecord;
-    private _writeRecord;
+    private _deleteEntry;
+    private _readEntry;
+    private _writeEntry;
     private _listRecordKeys;
     private _listRecords;
     private _nextInstruction;

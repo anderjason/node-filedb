@@ -1,11 +1,8 @@
 import { UnsaltedHash } from "@anderjason/node-crypto";
 import { ObservableDict } from "@anderjason/observable";
-import {
-  FileDbAdapter,
-  PortableMetric,
-  PortableRecordMetricValues,
-} from "../../FileDbAdapters";
+import { FileDbAdapter } from "../../FileDbAdapters";
 import { PropsObject } from "../../PropsObject";
+import { PortableEntryMetricValues, PortableMetric } from "../Types";
 
 export interface MetricProps {
   metricKey: string;
@@ -13,14 +10,14 @@ export interface MetricProps {
 }
 
 export class Metric extends PropsObject<MetricProps> {
-  readonly recordMetricValues = ObservableDict.ofEmpty<number>();
+  readonly entryMetricValues = ObservableDict.ofEmpty<number>();
 
   async load() {
     const portableMetric = await this.props.adapter.toOptionalValueGivenKey(
       this.props.metricKey
     );
 
-    this.recordMetricValues.sync(portableMetric.recordMetricValues);
+    this.entryMetricValues.sync(portableMetric.entryMetricValues);
   }
 
   async save(): Promise<void> {
@@ -28,18 +25,18 @@ export class Metric extends PropsObject<MetricProps> {
       .toHashedString()
       .slice(0, 24);
 
-    if (this.recordMetricValues.count > 0) {
-      const recordMetricValues: PortableRecordMetricValues = {};
+    if (this.entryMetricValues.count > 0) {
+      const entryMetricValues: PortableEntryMetricValues = {};
 
-      this.recordMetricValues.toKeys().forEach((recordKey) => {
-        recordMetricValues[
-          recordKey
-        ] = this.recordMetricValues.toOptionalValueGivenKey(recordKey);
+      this.entryMetricValues.toKeys().forEach((entryKey) => {
+        entryMetricValues[
+          entryKey
+        ] = this.entryMetricValues.toOptionalValueGivenKey(entryKey);
       });
 
       const contents = {
         metricKey: this.props.metricKey,
-        recordMetricValues,
+        entryMetricValues,
       };
 
       await this.props.adapter.writeValue(hash, contents);

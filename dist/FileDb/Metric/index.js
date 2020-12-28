@@ -7,24 +7,24 @@ const PropsObject_1 = require("../../PropsObject");
 class Metric extends PropsObject_1.PropsObject {
     constructor() {
         super(...arguments);
-        this.recordMetricValues = observable_1.ObservableDict.ofEmpty();
+        this.entryMetricValues = observable_1.ObservableDict.ofEmpty();
     }
     async load() {
         const portableMetric = await this.props.adapter.toOptionalValueGivenKey(this.props.metricKey);
-        this.recordMetricValues.sync(portableMetric.recordMetricValues);
+        this.entryMetricValues.sync(portableMetric.entryMetricValues);
     }
     async save() {
         const hash = node_crypto_1.UnsaltedHash.givenUnhashedString(this.props.metricKey)
             .toHashedString()
             .slice(0, 24);
-        if (this.recordMetricValues.count > 0) {
-            const recordMetricValues = {};
-            this.recordMetricValues.toKeys().forEach((recordKey) => {
-                recordMetricValues[recordKey] = this.recordMetricValues.toOptionalValueGivenKey(recordKey);
+        if (this.entryMetricValues.count > 0) {
+            const entryMetricValues = {};
+            this.entryMetricValues.toKeys().forEach((entryKey) => {
+                entryMetricValues[entryKey] = this.entryMetricValues.toOptionalValueGivenKey(entryKey);
             });
             const contents = {
                 metricKey: this.props.metricKey,
-                recordMetricValues,
+                entryMetricValues,
             };
             await this.props.adapter.writeValue(hash, contents);
         }

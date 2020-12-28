@@ -8,28 +8,28 @@ import {
 import { Instant } from "@anderjason/time";
 import { PropsObject } from "../../PropsObject";
 
-export interface DbRecordProps<T> {
-  recordKey?: string;
-  recordData?: T;
+export interface EntryProps<T> {
+  entryKey?: string;
+  data?: T;
   createdAt?: Instant;
   updatedAt?: Instant;
   tagKeys?: Set<string>;
   metricValues?: Dict<number>;
 }
 
-export class DbRecord<T> extends PropsObject<DbRecordProps<T>> {
-  readonly recordKey: string;
+export class Entry<T> extends PropsObject<EntryProps<T>> {
+  readonly entryKey: string;
   readonly tagKeys = ObservableSet.ofEmpty<string>();
   readonly metricValues = ObservableDict.ofEmpty<number>();
   readonly createdAt = Observable.ofEmpty<Instant>();
   readonly updatedAt = Observable.ofEmpty<Instant>();
-  readonly recordData = Observable.ofEmpty<T>();
+  readonly data = Observable.ofEmpty<T>();
 
-  constructor(props: DbRecordProps<T>) {
+  constructor(props: EntryProps<T>) {
     super(props);
 
-    this.recordKey = props.recordKey || UniqueId.ofRandom().toUUIDString();
-    this.recordData.setValue(props.recordData);
+    this.entryKey = props.entryKey || UniqueId.ofRandom().toUUIDString();
+    this.data.setValue(props.data);
     this.createdAt.setValue(props.createdAt || Instant.ofNow());
     this.updatedAt.setValue(
       props.updatedAt || props.createdAt || Instant.ofNow()

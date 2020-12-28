@@ -1,9 +1,8 @@
 import { LocalDirectory } from "@anderjason/node-filesystem";
 import { Actor } from "skytree";
+import { PortableTag, PortableEntry, PortableMetric } from "../FileDb/Types";
 import { LocalFileAdapter } from "../LocalFileAdapter";
 import { MemoryAdapter } from "../MemoryAdapter";
-
-export type MetricValue = number;
 
 export interface FileDbAdapter<T> extends Actor {
   toKeys(): Promise<string[]>;
@@ -13,35 +12,9 @@ export interface FileDbAdapter<T> extends Actor {
   deleteKey(key: string): Promise<void>;
 }
 
-export interface PortableTag {
-  tagKey: string;
-  recordKeys: string[];
-}
-
-export interface PortableRecordMetricValues {
-  [recordKey: string]: MetricValue;
-}
-
-export interface PortableMetric {
-  metricKey: string;
-  recordMetricValues: PortableRecordMetricValues;
-}
-
-export interface PortableRecord {
-  recordKey: string;
-  createdAtMs: number;
-  updatedAtMs: number;
-  data: any;
-
-  tagKeys?: string[];
-  metricValues?: {
-    [metricKey: string]: number;
-  };
-}
-
 interface FileDbAdaptersProps {
   tagsAdapter: FileDbAdapter<PortableTag>;
-  recordsAdapter: FileDbAdapter<PortableRecord>;
+  entriesAdapter: FileDbAdapter<PortableEntry>;
   metricsAdapter: FileDbAdapter<PortableMetric>;
 }
 
@@ -49,7 +22,7 @@ export class FileDbAdapters extends Actor<FileDbAdaptersProps> {
   static ofMemory(): FileDbAdapters {
     return new FileDbAdapters({
       tagsAdapter: new MemoryAdapter(),
-      recordsAdapter: new MemoryAdapter(),
+      entriesAdapter: new MemoryAdapter(),
       metricsAdapter: new MemoryAdapter(),
     });
   }
@@ -69,7 +42,7 @@ export class FileDbAdapters extends Actor<FileDbAdaptersProps> {
         bufferGivenValue,
         valueGivenBuffer,
       }),
-      recordsAdapter: new LocalFileAdapter({
+      entriesAdapter: new LocalFileAdapter({
         directory: LocalDirectory.givenRelativePath(directory, "data"),
         bufferGivenValue,
         valueGivenBuffer,
@@ -84,7 +57,7 @@ export class FileDbAdapters extends Actor<FileDbAdaptersProps> {
 
   onActivate() {
     this.addActor(this.props.tagsAdapter);
-    this.addActor(this.props.recordsAdapter);
+    this.addActor(this.props.entriesAdapter);
     this.addActor(this.props.metricsAdapter);
   }
 }

@@ -1,20 +1,20 @@
 import { Dict, Observable, ObservableDict, ObservableSet } from "@anderjason/observable";
 import { Instant } from "@anderjason/time";
 import { PropsObject } from "../../PropsObject";
-export interface DbRecordProps<T> {
-    recordKey?: string;
-    recordData?: T;
+export interface EntryProps<T> {
+    entryKey?: string;
+    data?: T;
     createdAt?: Instant;
     updatedAt?: Instant;
     tagKeys?: Set<string>;
     metricValues?: Dict<number>;
 }
-export declare class DbRecord<T> extends PropsObject<DbRecordProps<T>> {
-    readonly recordKey: string;
+export declare class Entry<T> extends PropsObject<EntryProps<T>> {
+    readonly entryKey: string;
     readonly tagKeys: ObservableSet<string>;
     readonly metricValues: ObservableDict<number>;
     readonly createdAt: Observable<Instant>;
     readonly updatedAt: Observable<Instant>;
-    readonly recordData: Observable<T>;
-    constructor(props: DbRecordProps<T>);
+    readonly data: Observable<T>;
+    constructor(props: EntryProps<T>);
 }

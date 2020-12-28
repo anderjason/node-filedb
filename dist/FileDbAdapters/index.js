@@ -9,7 +9,7 @@ class FileDbAdapters extends skytree_1.Actor {
     static ofMemory() {
         return new FileDbAdapters({
             tagsAdapter: new MemoryAdapter_1.MemoryAdapter(),
-            recordsAdapter: new MemoryAdapter_1.MemoryAdapter(),
+            entriesAdapter: new MemoryAdapter_1.MemoryAdapter(),
             metricsAdapter: new MemoryAdapter_1.MemoryAdapter(),
         });
     }
@@ -26,7 +26,7 @@ class FileDbAdapters extends skytree_1.Actor {
                 bufferGivenValue,
                 valueGivenBuffer,
             }),
-            recordsAdapter: new LocalFileAdapter_1.LocalFileAdapter({
+            entriesAdapter: new LocalFileAdapter_1.LocalFileAdapter({
                 directory: node_filesystem_1.LocalDirectory.givenRelativePath(directory, "data"),
                 bufferGivenValue,
                 valueGivenBuffer,
@@ -40,7 +40,7 @@ class FileDbAdapters extends skytree_1.Actor {
     }
     onActivate() {
         this.addActor(this.props.tagsAdapter);
-        this.addActor(this.props.recordsAdapter);
+        this.addActor(this.props.entriesAdapter);
         this.addActor(this.props.metricsAdapter);
     }
 }
