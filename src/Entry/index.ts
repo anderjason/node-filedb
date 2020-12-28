@@ -6,7 +6,7 @@ import {
   ObservableSet,
 } from "@anderjason/observable";
 import { Instant } from "@anderjason/time";
-import { PropsObject } from "../../PropsObject";
+import { PropsObject } from "../PropsObject";
 
 export interface EntryProps<T> {
   entryKey?: string;

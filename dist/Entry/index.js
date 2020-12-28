@@ -4,7 +4,7 @@ exports.Entry = void 0;
 const node_crypto_1 = require("@anderjason/node-crypto");
 const observable_1 = require("@anderjason/observable");
 const time_1 = require("@anderjason/time");
-const PropsObject_1 = require("../../PropsObject");
+const PropsObject_1 = require("../PropsObject");
 class Entry extends PropsObject_1.PropsObject {
     constructor(props) {
         super(props);

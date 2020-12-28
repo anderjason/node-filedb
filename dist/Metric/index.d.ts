@@ -1,7 +1,7 @@
 import { ObservableDict } from "@anderjason/observable";
-import { FileDbAdapter } from "../../FileDbAdapters";
-import { PropsObject } from "../../PropsObject";
-import { PortableMetric } from "../Types";
+import { FileDbAdapter } from "../FileDbAdapters";
+import { PropsObject } from "../PropsObject";
+import { PortableMetric } from "../FileDb/Types";
 export interface MetricProps {
     metricKey: string;
     adapter: FileDbAdapter<PortableMetric>;

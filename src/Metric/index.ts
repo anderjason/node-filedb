@@ -1,8 +1,8 @@
 import { UnsaltedHash } from "@anderjason/node-crypto";
 import { ObservableDict } from "@anderjason/observable";
-import { FileDbAdapter } from "../../FileDbAdapters";
-import { PropsObject } from "../../PropsObject";
-import { PortableEntryMetricValues, PortableMetric } from "../Types";
+import { FileDbAdapter } from "../FileDbAdapters";
+import { PropsObject } from "../PropsObject";
+import { PortableEntryMetricValues, PortableMetric } from "../FileDb/Types";
 
 export interface MetricProps {
   metricKey: string;

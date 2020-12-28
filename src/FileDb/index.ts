@@ -3,9 +3,9 @@ import { Actor } from "skytree";
 import { Instant } from "@anderjason/time";
 import { ArrayUtil, PromiseUtil, SetUtil } from "@anderjason/util";
 import { LRUCache } from "../LRUCache";
-import { Metric } from "./Metric";
-import { Tag } from "./Tag";
-import { Entry } from "./Entry";
+import { Metric } from "../Metric";
+import { Tag } from "../Tag";
+import { Entry } from "../Entry";
 import { FileDbAdapters } from "../FileDbAdapters";
 import {
   Dict,

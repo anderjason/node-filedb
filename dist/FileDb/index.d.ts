@@ -1,7 +1,7 @@
 import { Actor } from "skytree";
-import { Metric } from "./Metric";
-import { Tag } from "./Tag";
-import { Entry } from "./Entry";
+import { Metric } from "../Metric";
+import { Tag } from "../Tag";
+import { Entry } from "../Entry";
 import { FileDbAdapters } from "../FileDbAdapters";
 import { Dict, ReadOnlyObservable } from "@anderjason/observable";
 export interface FileDbReadOptions {

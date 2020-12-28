@@ -6,9 +6,9 @@ const skytree_1 = require("skytree");
 const time_1 = require("@anderjason/time");
 const util_1 = require("@anderjason/util");
 const LRUCache_1 = require("../LRUCache");
-const Metric_1 = require("./Metric");
-const Tag_1 = require("./Tag");
-const Entry_1 = require("./Entry");
+const Metric_1 = require("../Metric");
+const Tag_1 = require("../Tag");
+const Entry_1 = require("../Entry");
 const observable_1 = require("@anderjason/observable");
 class FileDb extends skytree_1.Actor {
     constructor(props) {
