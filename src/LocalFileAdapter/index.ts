@@ -65,10 +65,16 @@ export class LocalFileAdapter<T>
   private async load(): Promise<void> {
     await this.props.directory.createDirectory();
 
-    const keyCacheFileExists = await this.keyCacheFile.isAccessible();
+    let keyCacheFileExists = await this.keyCacheFile.isAccessible();
     if (keyCacheFileExists) {
-      const contents = await this.keyCacheFile.toContentString();
-      return JSON.parse(contents);
+      try {
+        const contents = await this.keyCacheFile.toContentString();
+        return JSON.parse(contents);
+      } catch (err) {
+        console.warn(err);
+        await this.keyCacheFile.deleteFile();
+        keyCacheFileExists = false;
+      }
     }
 
     const files = await this.getDataFiles();
@@ -89,6 +95,11 @@ export class LocalFileAdapter<T>
     );
 
     this._keys.sync(result);
+
+    if (keyCacheFileExists == false) {
+      this.writeKeyCacheLater.invoke();
+    }
+
     this._isReady.setValue(true);
   }
 
