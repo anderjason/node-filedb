@@ -127,6 +127,18 @@ export class LocalFileAdapter<T>
     );
   }
 
+  private oldFile2GivenKey(key: string): LocalFile {
+    const hash = UnsaltedHash.givenUnhashedString(key)
+      .toHashedString()
+      .slice(0, 24);
+
+    return LocalFile.givenRelativePath(
+      this.props.directory,
+      hash.slice(0, 3),
+      `${hash}.json`
+    );
+  }
+
   private newFileGivenKey(key: string): LocalFile {
     if (key == null) {
       throw new Error("Key is required");
@@ -151,14 +163,23 @@ export class LocalFileAdapter<T>
     }
 
     const newFile = this.newFileGivenKey(key);
+
     const oldFile = this.oldFileGivenKey(key);
     const oldFileExists = await oldFile.isAccessible();
-
     if (oldFileExists == true) {
       console.log(
         `Renaming ${oldFile.toAbsolutePath()} to ${newFile.toAbsolutePath()}...`
       );
       await rename(oldFile, newFile);
+    } else {
+      const oldFile2 = this.oldFile2GivenKey(key);
+      const oldFile2Exists = await oldFile2.isAccessible();
+      if (oldFile2Exists == true) {
+        console.log(
+          `Renaming ${oldFile2.toAbsolutePath()} to ${newFile.toAbsolutePath()}...`
+        );
+        await rename(oldFile2, newFile);
+      }
     }
 
     return newFile;

@@ -15,6 +15,7 @@ export declare class LocalFileAdapter<T> extends Actor<LocalFileAdapterProps<T>>
     writeValue(key: string, value: T): Promise<void>;
     deleteKey(key: string): Promise<void>;
     private oldFileGivenKey;
+    private oldFile2GivenKey;
     private newFileGivenKey;
     private fileGivenKey;
 }

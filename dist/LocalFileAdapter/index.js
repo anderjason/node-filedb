@@ -84,6 +84,12 @@ class LocalFileAdapter extends skytree_1.Actor {
         }
         return node_filesystem_1.LocalFile.givenRelativePath(this.props.directory, key.slice(0, 3), `${key}.json`);
     }
+    oldFile2GivenKey(key) {
+        const hash = node_crypto_1.UnsaltedHash.givenUnhashedString(key)
+            .toHashedString()
+            .slice(0, 24);
+        return node_filesystem_1.LocalFile.givenRelativePath(this.props.directory, hash.slice(0, 3), `${hash}.json`);
+    }
     newFileGivenKey(key) {
         if (key == null) {
             throw new Error("Key is required");
@@ -103,6 +109,14 @@ class LocalFileAdapter extends skytree_1.Actor {
         if (oldFileExists == true) {
             console.log(`Renaming ${oldFile.toAbsolutePath()} to ${newFile.toAbsolutePath()}...`);
             await rename_1.rename(oldFile, newFile);
+        }
+        else {
+            const oldFile2 = this.oldFile2GivenKey(key);
+            const oldFile2Exists = await oldFile2.isAccessible();
+            if (oldFile2Exists == true) {
+                console.log(`Renaming ${oldFile2.toAbsolutePath()} to ${newFile.toAbsolutePath()}...`);
+                await rename_1.rename(oldFile2, newFile);
+            }
         }
         return newFile;
     }
