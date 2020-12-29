@@ -112,6 +112,7 @@ export class LocalFileAdapter<T>
   }
 
   private newFileGivenKey(key: string): LocalFile {
+    console.log("newFileGivenKey", key);
     const hash = UnsaltedHash.givenUnhashedString(key)
       .toHashedString()
       .slice(0, 16);

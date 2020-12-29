@@ -73,6 +73,7 @@ class LocalFileAdapter extends skytree_1.Actor {
         return node_filesystem_1.LocalFile.givenRelativePath(this.props.directory, key.slice(0, 3), `${key}.json`);
     }
     newFileGivenKey(key) {
+        console.log("newFileGivenKey", key);
         const hash = node_crypto_1.UnsaltedHash.givenUnhashedString(key)
             .toHashedString()
             .slice(0, 16);
