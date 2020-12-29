@@ -3,16 +3,52 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.LocalFileAdapter = void 0;
 const node_crypto_1 = require("@anderjason/node-crypto");
 const node_filesystem_1 = require("@anderjason/node-filesystem");
+const observable_1 = require("@anderjason/observable");
+const time_1 = require("@anderjason/time");
 const util_1 = require("@anderjason/util");
 const skytree_1 = require("skytree");
 const rename_1 = require("./_internal/rename");
 class LocalFileAdapter extends skytree_1.Actor {
-    async toKeys() {
-        await this.props.directory.createDirectory();
-        let files = await this.props.directory.toDescendantFiles();
-        files = files.filter((file) => {
-            return file.hasExtension([".json"]);
+    constructor() {
+        super(...arguments);
+        this._keys = observable_1.ObservableSet.ofEmpty();
+        this._isReady = observable_1.Observable.givenValue(false, observable_1.Observable.isStrictEqual);
+        this.isReady = observable_1.ReadOnlyObservable.givenObservable(this._isReady);
+        this.writeKeyCacheLater = new time_1.Debounce({
+            fn: async () => {
+                const keyCacheContents = JSON.stringify(this._keys.toArray());
+                await this.keyCacheFile.writeFile(keyCacheContents);
+            },
+            duration: time_1.Duration.givenSeconds(0.5),
         });
+    }
+    onActivate() {
+        this.load();
+        this._keys.didChange.subscribe(async (keys) => {
+            if (this._isReady.value == false) {
+                return;
+            }
+            this.writeKeyCacheLater.invoke();
+        });
+    }
+    async toKeys() {
+        if (this.isReady.value == true) {
+            return this._keys.toArray();
+        }
+        await this._isReady.toPromise((v) => v == true);
+        return this._keys.toArray();
+    }
+    get keyCacheFile() {
+        return node_filesystem_1.LocalFile.givenRelativePath(this.props.directory, "keys.cache");
+    }
+    async load() {
+        await this.props.directory.createDirectory();
+        const keyCacheFileExists = await this.keyCacheFile.isAccessible();
+        if (keyCacheFileExists) {
+            const contents = await this.keyCacheFile.toContentString();
+            return JSON.parse(contents);
+        }
+        const files = await this.getDataFiles();
         const result = await util_1.PromiseUtil.asyncValuesGivenArrayAndConverter(files, async (file) => {
             let buffer = await file.toContentBuffer();
             const portableValueResult = this.props.valueGivenBuffer(buffer);
@@ -22,14 +58,12 @@ class LocalFileAdapter extends skytree_1.Actor {
             }
             return this.props.keyGivenValue(portableValueResult.value);
         });
-        return result;
+        this._keys.sync(result);
+        this._isReady.setValue(true);
     }
     async toValues() {
         await this.props.directory.createDirectory();
-        let files = await this.props.directory.toDescendantFiles();
-        files = files.filter((file) => {
-            return file.hasExtension([".json"]);
-        });
+        const files = await this.getDataFiles();
         const result = await util_1.PromiseUtil.asyncValuesGivenArrayAndConverter(files, async (file) => {
             let buffer = await file.toContentBuffer();
             const portableValueResult = this.props.valueGivenBuffer(buffer);
@@ -66,6 +100,7 @@ class LocalFileAdapter extends skytree_1.Actor {
         await file.toDirectory().createDirectory();
         const buffer = this.props.bufferGivenValue(value);
         await file.writeFile(buffer);
+        this._keys.addValue(key);
     }
     async deleteKey(key) {
         if (key == null) {
@@ -77,6 +112,14 @@ class LocalFileAdapter extends skytree_1.Actor {
             return undefined;
         }
         await file.deleteFile();
+        await this._keys.removeValue(key);
+    }
+    async getDataFiles() {
+        let files = await this.props.directory.toDescendantFiles();
+        files = files.filter((file) => {
+            return file.hasExtension([".json"]);
+        });
+        return files;
     }
     oldFileGivenKey(key) {
         if (key == null) {

@@ -1,5 +1,11 @@
 import { UnsaltedHash } from "@anderjason/node-crypto";
 import { LocalDirectory, LocalFile } from "@anderjason/node-filesystem";
+import {
+  Observable,
+  ObservableSet,
+  ReadOnlyObservable,
+} from "@anderjason/observable";
+import { Debounce, Duration } from "@anderjason/time";
 import { PromiseUtil } from "@anderjason/util";
 import { Actor } from "skytree";
 import { FileDbAdapter, PortableValueResult } from "../FileDbAdapters";
@@ -15,13 +21,57 @@ export interface LocalFileAdapterProps<T> {
 export class LocalFileAdapter<T>
   extends Actor<LocalFileAdapterProps<T>>
   implements FileDbAdapter<T> {
+  private _keys = ObservableSet.ofEmpty<string>();
+  private _isReady = Observable.givenValue<boolean>(
+    false,
+    Observable.isStrictEqual
+  );
+  readonly isReady = ReadOnlyObservable.givenObservable(this._isReady);
+
+  private writeKeyCacheLater = new Debounce({
+    fn: async () => {
+      const keyCacheContents = JSON.stringify(this._keys.toArray());
+      await this.keyCacheFile.writeFile(keyCacheContents);
+    },
+    duration: Duration.givenSeconds(0.5),
+  });
+
+  onActivate() {
+    this.load();
+
+    this._keys.didChange.subscribe(async (keys) => {
+      if (this._isReady.value == false) {
+        return;
+      }
+
+      this.writeKeyCacheLater.invoke();
+    });
+  }
+
   async toKeys(): Promise<string[]> {
+    if (this.isReady.value == true) {
+      return this._keys.toArray();
+    }
+
+    await this._isReady.toPromise((v) => v == true);
+
+    return this._keys.toArray();
+  }
+
+  private get keyCacheFile(): LocalFile {
+    return LocalFile.givenRelativePath(this.props.directory, "keys.cache");
+  }
+
+  private async load(): Promise<void> {
     await this.props.directory.createDirectory();
 
-    let files = await this.props.directory.toDescendantFiles();
-    files = files.filter((file) => {
-      return file.hasExtension([".json"]);
-    });
+    const keyCacheFileExists = await this.keyCacheFile.isAccessible();
+    if (keyCacheFileExists) {
+      const contents = await this.keyCacheFile.toContentString();
+      return JSON.parse(contents);
+    }
+
+    const files = await this.getDataFiles();
 
     const result: string[] = await PromiseUtil.asyncValuesGivenArrayAndConverter(
       files,
@@ -38,16 +88,14 @@ export class LocalFileAdapter<T>
       }
     );
 
-    return result;
+    this._keys.sync(result);
+    this._isReady.setValue(true);
   }
 
   async toValues(): Promise<T[]> {
     await this.props.directory.createDirectory();
 
-    let files = await this.props.directory.toDescendantFiles();
-    files = files.filter((file) => {
-      return file.hasExtension([".json"]);
-    });
+    const files = await this.getDataFiles();
 
     const result = await PromiseUtil.asyncValuesGivenArrayAndConverter(
       files,
@@ -99,6 +147,8 @@ export class LocalFileAdapter<T>
 
     const buffer = this.props.bufferGivenValue(value);
     await file.writeFile(buffer);
+
+    this._keys.addValue(key);
   }
 
   async deleteKey(key: string): Promise<void> {
@@ -113,6 +163,18 @@ export class LocalFileAdapter<T>
     }
 
     await file.deleteFile();
+
+    await this._keys.removeValue(key);
+  }
+
+  private async getDataFiles(): Promise<LocalFile[]> {
+    let files = await this.props.directory.toDescendantFiles();
+
+    files = files.filter((file) => {
+      return file.hasExtension([".json"]);
+    });
+
+    return files;
   }
 
   private oldFileGivenKey(key: string): LocalFile {
