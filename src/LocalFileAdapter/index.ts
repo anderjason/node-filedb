@@ -130,6 +130,9 @@ export class LocalFileAdapter<T>
     const oldFileExists = await oldFile.isAccessible();
 
     if (oldFileExists == true) {
+      console.log(
+        `Renaming ${oldFile.toAbsolutePath()} to ${newFile.toAbsolutePath()}...`
+      );
       await rename(oldFile, newFile);
     }
 
