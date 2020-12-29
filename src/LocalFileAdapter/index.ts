@@ -68,6 +68,10 @@ export class LocalFileAdapter<T>
   }
 
   async toOptionalValueGivenKey(key: string): Promise<T> {
+    if (key == null) {
+      throw new Error("Key is required");
+    }
+
     const file = await this.fileGivenKey(key);
     const isAccessible = await file.isAccessible();
     if (!isAccessible) {
@@ -86,6 +90,10 @@ export class LocalFileAdapter<T>
   }
 
   async writeValue(key: string, value: T): Promise<void> {
+    if (key == null) {
+      throw new Error("Key is required");
+    }
+
     const file = await this.fileGivenKey(key);
     await file.toDirectory().createDirectory();
 
@@ -94,6 +102,10 @@ export class LocalFileAdapter<T>
   }
 
   async deleteKey(key: string): Promise<void> {
+    if (key == null) {
+      throw new Error("Key is required");
+    }
+
     const file = await this.fileGivenKey(key);
     const isAccessible = await file.isAccessible();
     if (!isAccessible) {
@@ -104,6 +116,10 @@ export class LocalFileAdapter<T>
   }
 
   private oldFileGivenKey(key: string): LocalFile {
+    if (key == null) {
+      throw new Error("Key is required");
+    }
+
     return LocalFile.givenRelativePath(
       this.props.directory,
       key.slice(0, 3),
@@ -112,7 +128,10 @@ export class LocalFileAdapter<T>
   }
 
   private newFileGivenKey(key: string): LocalFile {
-    console.log("newFileGivenKey", key);
+    if (key == null) {
+      throw new Error("Key is required");
+    }
+
     const hash = UnsaltedHash.givenUnhashedString(key)
       .toHashedString()
       .slice(0, 16);
@@ -127,6 +146,10 @@ export class LocalFileAdapter<T>
   }
 
   private async fileGivenKey(key: string): Promise<LocalFile> {
+    if (key == null) {
+      throw new Error("Key is required");
+    }
+
     const newFile = this.newFileGivenKey(key);
     const oldFile = this.oldFileGivenKey(key);
     const oldFileExists = await oldFile.isAccessible();

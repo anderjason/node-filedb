@@ -42,6 +42,9 @@ class LocalFileAdapter extends skytree_1.Actor {
         return result;
     }
     async toOptionalValueGivenKey(key) {
+        if (key == null) {
+            throw new Error("Key is required");
+        }
         const file = await this.fileGivenKey(key);
         const isAccessible = await file.isAccessible();
         if (!isAccessible) {
@@ -56,12 +59,18 @@ class LocalFileAdapter extends skytree_1.Actor {
         return portableValueResult.value;
     }
     async writeValue(key, value) {
+        if (key == null) {
+            throw new Error("Key is required");
+        }
         const file = await this.fileGivenKey(key);
         await file.toDirectory().createDirectory();
         const buffer = this.props.bufferGivenValue(value);
         await file.writeFile(buffer);
     }
     async deleteKey(key) {
+        if (key == null) {
+            throw new Error("Key is required");
+        }
         const file = await this.fileGivenKey(key);
         const isAccessible = await file.isAccessible();
         if (!isAccessible) {
@@ -70,16 +79,24 @@ class LocalFileAdapter extends skytree_1.Actor {
         await file.deleteFile();
     }
     oldFileGivenKey(key) {
+        if (key == null) {
+            throw new Error("Key is required");
+        }
         return node_filesystem_1.LocalFile.givenRelativePath(this.props.directory, key.slice(0, 3), `${key}.json`);
     }
     newFileGivenKey(key) {
-        console.log("newFileGivenKey", key);
+        if (key == null) {
+            throw new Error("Key is required");
+        }
         const hash = node_crypto_1.UnsaltedHash.givenUnhashedString(key)
             .toHashedString()
             .slice(0, 16);
         return node_filesystem_1.LocalFile.givenRelativePath(this.props.directory, hash.slice(0, 1), hash.slice(1, 2), hash.slice(2, 3), `${hash}.json`);
     }
     async fileGivenKey(key) {
+        if (key == null) {
+            throw new Error("Key is required");
+        }
         const newFile = this.newFileGivenKey(key);
         const oldFile = this.oldFileGivenKey(key);
         const oldFileExists = await oldFile.isAccessible();
