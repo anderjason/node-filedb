@@ -7,7 +7,9 @@ export interface MetricProps {
     adapter: FileDbAdapter<PortableMetric>;
 }
 export declare class Metric extends PropsObject<MetricProps> {
+    readonly metricKey: string;
     readonly entryMetricValues: ObservableDict<number>;
+    constructor(props: MetricProps);
     load(): Promise<void>;
     save(): Promise<void>;
 }

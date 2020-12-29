@@ -5,9 +5,16 @@ const node_crypto_1 = require("@anderjason/node-crypto");
 const observable_1 = require("@anderjason/observable");
 const PropsObject_1 = require("../PropsObject");
 class Tag extends PropsObject_1.PropsObject {
-    constructor() {
-        super(...arguments);
+    constructor(props) {
+        super(props);
         this.entryKeys = observable_1.ObservableSet.ofEmpty();
+        if (props.tagKey == null) {
+            throw new Error("tagKey is required");
+        }
+        if (props.adapter == null) {
+            throw new Error("adapter is required");
+        }
+        this.tagKey = props.tagKey;
     }
     async load() {
         const portableTag = await this.props.adapter.toOptionalValueGivenKey(this.props.tagKey);

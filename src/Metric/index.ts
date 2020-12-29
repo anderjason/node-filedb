@@ -10,7 +10,22 @@ export interface MetricProps {
 }
 
 export class Metric extends PropsObject<MetricProps> {
+  readonly metricKey: string;
   readonly entryMetricValues = ObservableDict.ofEmpty<number>();
+
+  constructor(props: MetricProps) {
+    super(props);
+
+    if (props.metricKey == null) {
+      throw new Error("metricKey is required");
+    }
+
+    if (props.adapter == null) {
+      throw new Error("adapter is required");
+    }
+
+    this.metricKey = props.metricKey;
+  }
 
   async load() {
     const portableMetric = await this.props.adapter.toOptionalValueGivenKey(

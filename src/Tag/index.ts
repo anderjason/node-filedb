@@ -10,7 +10,22 @@ export interface TagProps {
 }
 
 export class Tag extends PropsObject<TagProps> {
+  readonly tagKey: string;
   readonly entryKeys = ObservableSet.ofEmpty<string>();
+
+  constructor(props: TagProps) {
+    super(props);
+
+    if (props.tagKey == null) {
+      throw new Error("tagKey is required");
+    }
+
+    if (props.adapter == null) {
+      throw new Error("adapter is required");
+    }
+
+    this.tagKey = props.tagKey;
+  }
 
   async load(): Promise<void> {
     const portableTag = await this.props.adapter.toOptionalValueGivenKey(

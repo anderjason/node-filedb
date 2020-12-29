@@ -5,9 +5,16 @@ const node_crypto_1 = require("@anderjason/node-crypto");
 const observable_1 = require("@anderjason/observable");
 const PropsObject_1 = require("../PropsObject");
 class Metric extends PropsObject_1.PropsObject {
-    constructor() {
-        super(...arguments);
+    constructor(props) {
+        super(props);
         this.entryMetricValues = observable_1.ObservableDict.ofEmpty();
+        if (props.metricKey == null) {
+            throw new Error("metricKey is required");
+        }
+        if (props.adapter == null) {
+            throw new Error("adapter is required");
+        }
+        this.metricKey = props.metricKey;
     }
     async load() {
         const portableMetric = await this.props.adapter.toOptionalValueGivenKey(this.props.metricKey);
