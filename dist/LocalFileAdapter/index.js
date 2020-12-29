@@ -108,6 +108,7 @@ class LocalFileAdapter extends skytree_1.Actor {
         const oldFileExists = await oldFile.isAccessible();
         if (oldFileExists == true) {
             console.log(`Renaming ${oldFile.toAbsolutePath()} to ${newFile.toAbsolutePath()}...`);
+            await newFile.toDirectory().createDirectory();
             await rename_1.rename(oldFile, newFile);
         }
         else {
@@ -115,6 +116,7 @@ class LocalFileAdapter extends skytree_1.Actor {
             const oldFile2Exists = await oldFile2.isAccessible();
             if (oldFile2Exists == true) {
                 console.log(`Renaming ${oldFile2.toAbsolutePath()} to ${newFile.toAbsolutePath()}...`);
+                await newFile.toDirectory().createDirectory();
                 await rename_1.rename(oldFile2, newFile);
             }
         }

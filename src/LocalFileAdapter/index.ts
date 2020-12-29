@@ -170,6 +170,7 @@ export class LocalFileAdapter<T>
       console.log(
         `Renaming ${oldFile.toAbsolutePath()} to ${newFile.toAbsolutePath()}...`
       );
+      await newFile.toDirectory().createDirectory();
       await rename(oldFile, newFile);
     } else {
       const oldFile2 = this.oldFile2GivenKey(key);
@@ -178,6 +179,7 @@ export class LocalFileAdapter<T>
         console.log(
           `Renaming ${oldFile2.toAbsolutePath()} to ${newFile.toAbsolutePath()}...`
         );
+        await newFile.toDirectory().createDirectory();
         await rename(oldFile2, newFile);
       }
     }
