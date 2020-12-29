@@ -1,11 +1,14 @@
+import { UnsaltedHash } from "@anderjason/node-crypto";
 import { LocalDirectory, LocalFile } from "@anderjason/node-filesystem";
 import { PromiseUtil } from "@anderjason/util";
 import { Actor } from "skytree";
 import { FileDbAdapter, PortableValueResult } from "../FileDbAdapters";
+import { rename } from "./_internal/rename";
 
 export interface LocalFileAdapterProps<T> {
   directory: LocalDirectory;
   valueGivenBuffer: (buffer: Buffer) => PortableValueResult<T>;
+  keyGivenValue: (value: T) => string;
   bufferGivenValue: (value: T) => Buffer;
 }
 
@@ -15,11 +18,25 @@ export class LocalFileAdapter<T>
   async toKeys(): Promise<string[]> {
     await this.props.directory.createDirectory();
 
-    const files = await this.props.directory.toDescendantFiles();
+    let files = await this.props.directory.toDescendantFiles();
+    files = files.filter((file) => {
+      return file.hasExtension([".json"]);
+    });
 
-    const result = files
-      .filter((file) => file.hasExtension([".json"]))
-      .map((file) => file.toFilenameWithoutExtension());
+    const result: string[] = await PromiseUtil.asyncValuesGivenArrayAndConverter(
+      files,
+      async (file) => {
+        let buffer = await file.toContentBuffer();
+        const portableValueResult = this.props.valueGivenBuffer(buffer);
+
+        if (portableValueResult.shouldRewriteStorage == true) {
+          buffer = this.props.bufferGivenValue(portableValueResult.value);
+          await file.writeFile(buffer);
+        }
+
+        return this.props.keyGivenValue(portableValueResult.value);
+      }
+    );
 
     return result;
   }
@@ -51,7 +68,7 @@ export class LocalFileAdapter<T>
   }
 
   async toOptionalValueGivenKey(key: string): Promise<T> {
-    const file = this.fileGivenKey(key);
+    const file = await this.fileGivenKey(key);
     const isAccessible = await file.isAccessible();
     if (!isAccessible) {
       return undefined;
@@ -69,7 +86,7 @@ export class LocalFileAdapter<T>
   }
 
   async writeValue(key: string, value: T): Promise<void> {
-    const file = this.fileGivenKey(key);
+    const file = await this.fileGivenKey(key);
     await file.toDirectory().createDirectory();
 
     const buffer = this.props.bufferGivenValue(value);
@@ -77,7 +94,7 @@ export class LocalFileAdapter<T>
   }
 
   async deleteKey(key: string): Promise<void> {
-    const file = this.fileGivenKey(key);
+    const file = await this.fileGivenKey(key);
     const isAccessible = await file.isAccessible();
     if (!isAccessible) {
       return undefined;
@@ -86,11 +103,36 @@ export class LocalFileAdapter<T>
     await file.deleteFile();
   }
 
-  private fileGivenKey(key: string): LocalFile {
+  private oldFileGivenKey(key: string): LocalFile {
     return LocalFile.givenRelativePath(
       this.props.directory,
       key.slice(0, 3),
       `${key}.json`
     );
+  }
+
+  private newFileGivenKey(key: string): LocalFile {
+    const hash = UnsaltedHash.givenUnhashedString(key)
+      .toHashedString()
+      .slice(0, 16);
+    return LocalFile.givenRelativePath(
+      this.props.directory,
+      hash.slice(0, 1),
+      hash.slice(1, 2),
+      hash.slice(2, 3),
+      `${hash}.json`
+    );
+  }
+
+  private async fileGivenKey(key: string): Promise<LocalFile> {
+    const newFile = this.newFileGivenKey(key);
+    const oldFile = this.oldFileGivenKey(key);
+    const oldFileExists = await oldFile.isAccessible();
+
+    if (oldFileExists == true) {
+      await rename(oldFile, newFile);
+    }
+
+    return newFile;
   }
 }

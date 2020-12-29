@@ -6,6 +6,9 @@ import { MemoryAdapter } from "../MemoryAdapter";
 import { bufferGivenPortableEntry } from "./_internal/bufferGivenPortableEntry";
 import { bufferGivenPortableMetric } from "./_internal/bufferGivenPortableMetric";
 import { bufferGivenPortableTag } from "./_internal/bufferGivenPortableTag";
+import { keyGivenPortableEntry } from "./_internal/keyGivenPortableEntry";
+import { keyGivenPortableMetric } from "./_internal/keyGivenPortableMetric";
+import { keyGivenPortableTag } from "./_internal/keyGivenPortableTag";
 import { portableEntryResultGivenBuffer } from "./_internal/portableEntryResultGivenBuffer";
 import { portableMetricResultGivenBuffer } from "./_internal/portableMetricResultGivenBuffer";
 import { portableTagResultGivenBuffer } from "./_internal/portableTagResultGivenBuffer";
@@ -42,16 +45,19 @@ export class FileDbAdapters extends Actor<FileDbAdaptersProps> {
     return new FileDbAdapters({
       tagsAdapter: new LocalFileAdapter<PortableTag>({
         directory: LocalDirectory.givenRelativePath(directory, "tags"),
+        keyGivenValue: keyGivenPortableTag,
         bufferGivenValue: bufferGivenPortableTag,
         valueGivenBuffer: portableTagResultGivenBuffer,
       }),
       entriesAdapter: new LocalFileAdapter<PortableEntry>({
         directory: LocalDirectory.givenRelativePath(directory, "entries"),
+        keyGivenValue: keyGivenPortableEntry,
         bufferGivenValue: bufferGivenPortableEntry,
         valueGivenBuffer: portableEntryResultGivenBuffer,
       }),
       metricsAdapter: new LocalFileAdapter<PortableMetric>({
         directory: LocalDirectory.givenRelativePath(directory, "metrics"),
+        keyGivenValue: keyGivenPortableMetric,
         bufferGivenValue: bufferGivenPortableMetric,
         valueGivenBuffer: portableMetricResultGivenBuffer,
       }),
