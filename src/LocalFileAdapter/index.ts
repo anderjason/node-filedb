@@ -115,6 +115,7 @@ export class LocalFileAdapter<T>
     const hash = UnsaltedHash.givenUnhashedString(key)
       .toHashedString()
       .slice(0, 16);
+
     return LocalFile.givenRelativePath(
       this.props.directory,
       hash.slice(0, 1),
