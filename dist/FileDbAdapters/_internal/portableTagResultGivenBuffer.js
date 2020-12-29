@@ -11,10 +11,7 @@ function portableTagGivenVersion1(obj) {
 }
 function portableTagGivenVersion2(obj) {
     ensureValuesExist_1.ensureValuesExist(obj, "portableTagGivenVersion2", ["tagKey", "entryKeys"]);
-    return {
-        tagKey: obj.collection,
-        entryKeys: obj.keys,
-    };
+    return obj;
 }
 function portableTagResultGivenBuffer(buffer) {
     const obj = JSON.parse(buffer.toString());

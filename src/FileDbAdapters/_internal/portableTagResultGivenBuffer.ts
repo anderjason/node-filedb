@@ -14,10 +14,7 @@ function portableTagGivenVersion1(obj: any): PortableTag {
 function portableTagGivenVersion2(obj: any): PortableTag {
   ensureValuesExist(obj, "portableTagGivenVersion2", ["tagKey", "entryKeys"]);
 
-  return {
-    tagKey: obj.collection,
-    entryKeys: obj.keys,
-  };
+  return obj;
 }
 
 export function portableTagResultGivenBuffer(
