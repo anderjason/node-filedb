@@ -15,6 +15,7 @@ class Tag extends PropsObject_1.PropsObject {
             throw new Error("adapter is required");
         }
         this.tagKey = props.tagKey;
+        this.tagPrefix = props.tagKey.split(":")[0];
     }
     async load() {
         const portableTag = await this.props.adapter.toOptionalValueGivenKey(this.props.tagKey);

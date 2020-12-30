@@ -15,6 +15,7 @@ class FileDb extends skytree_1.Actor {
         super(props);
         this._isReady = observable_1.Observable.givenValue(false, observable_1.Observable.isStrictEqual);
         this.isReady = observable_1.ReadOnlyObservable.givenObservable(this._isReady);
+        this._tagPrefixes = observable_1.ObservableSet.ofEmpty();
         this._tags = observable_1.ObservableDict.ofEmpty();
         this._metrics = observable_1.ObservableDict.ofEmpty();
         this._allEntryKeys = observable_1.Observable.ofEmpty();
@@ -286,6 +287,7 @@ class FileDb extends skytree_1.Actor {
             });
             await tag.load();
             this._tags.setValue(tagKey, tag);
+            this._tagPrefixes.addValue(tag.tagPrefix);
         });
         await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(metricKeys, async (metricKey) => {
             const metric = new Metric_1.Metric({

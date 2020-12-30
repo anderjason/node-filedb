@@ -20,6 +20,7 @@ export declare class FileDb<T> extends Actor<FileDbProps<T>> {
     private _isReady;
     readonly isReady: ReadOnlyObservable<boolean>;
     private _entryCache;
+    private _tagPrefixes;
     private _tags;
     private _metrics;
     private _allEntryKeys;

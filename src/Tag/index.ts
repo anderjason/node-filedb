@@ -10,6 +10,7 @@ export interface TagProps {
 }
 
 export class Tag extends PropsObject<TagProps> {
+  readonly tagPrefix: string;
   readonly tagKey: string;
   readonly entryKeys = ObservableSet.ofEmpty<string>();
 
@@ -25,6 +26,7 @@ export class Tag extends PropsObject<TagProps> {
     }
 
     this.tagKey = props.tagKey;
+    this.tagPrefix = props.tagKey.split(":")[0];
   }
 
   async load(): Promise<void> {

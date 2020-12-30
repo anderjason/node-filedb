@@ -11,6 +11,7 @@ import {
   Dict,
   Observable,
   ObservableDict,
+  ObservableSet,
   ReadOnlyObservable,
 } from "@anderjason/observable";
 import { PortableEntry } from "./Types";
@@ -80,6 +81,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
   readonly isReady = ReadOnlyObservable.givenObservable(this._isReady);
 
   private _entryCache: LRUCache<Entry<T>>;
+  private _tagPrefixes = ObservableSet.ofEmpty<string>();
   private _tags = ObservableDict.ofEmpty<Tag>();
   private _metrics = ObservableDict.ofEmpty<Metric>();
   private _allEntryKeys = Observable.ofEmpty<string[]>();
@@ -129,6 +131,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
         await tag.load();
 
         this._tags.setValue(tagKey, tag);
+        this._tagPrefixes.addValue(tag.tagPrefix);
       }
     );
 

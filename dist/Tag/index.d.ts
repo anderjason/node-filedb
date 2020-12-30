@@ -7,6 +7,7 @@ export interface TagProps {
     adapter: FileDbAdapter<PortableTag>;
 }
 export declare class Tag extends PropsObject<TagProps> {
+    readonly tagPrefix: string;
     readonly tagKey: string;
     readonly entryKeys: ObservableSet<string>;
     constructor(props: TagProps);
