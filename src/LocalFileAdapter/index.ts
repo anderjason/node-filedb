@@ -65,11 +65,13 @@ export class LocalFileAdapter<T>
   private async load(): Promise<void> {
     await this.props.directory.createDirectory();
 
+    let keys: string[];
+
     let keyCacheFileExists = await this.keyCacheFile.isAccessible();
     if (keyCacheFileExists) {
       try {
         const contents = await this.keyCacheFile.toContentString();
-        return JSON.parse(contents);
+        keys = JSON.parse(contents);
       } catch (err) {
         console.warn(err);
         await this.keyCacheFile.deleteFile();
@@ -77,24 +79,26 @@ export class LocalFileAdapter<T>
       }
     }
 
-    const files = await this.getDataFiles();
+    if (keys == null) {
+      const files = await this.getDataFiles();
 
-    const result: string[] = await PromiseUtil.asyncValuesGivenArrayAndConverter(
-      files,
-      async (file) => {
-        let buffer = await file.toContentBuffer();
-        const portableValueResult = this.props.valueGivenBuffer(buffer);
+      keys = await PromiseUtil.asyncValuesGivenArrayAndConverter(
+        files,
+        async (file) => {
+          let buffer = await file.toContentBuffer();
+          const portableValueResult = this.props.valueGivenBuffer(buffer);
 
-        if (portableValueResult.shouldRewriteStorage == true) {
-          buffer = this.props.bufferGivenValue(portableValueResult.value);
-          await file.writeFile(buffer);
+          if (portableValueResult.shouldRewriteStorage == true) {
+            buffer = this.props.bufferGivenValue(portableValueResult.value);
+            await file.writeFile(buffer);
+          }
+
+          return this.props.keyGivenValue(portableValueResult.value);
         }
+      );
+    }
 
-        return this.props.keyGivenValue(portableValueResult.value);
-      }
-    );
-
-    this._keys.sync(result);
+    this._keys.sync(keys);
 
     if (keyCacheFileExists == false) {
       this.writeKeyCacheLater.invoke();

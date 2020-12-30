@@ -43,11 +43,12 @@ class LocalFileAdapter extends skytree_1.Actor {
     }
     async load() {
         await this.props.directory.createDirectory();
+        let keys;
         let keyCacheFileExists = await this.keyCacheFile.isAccessible();
         if (keyCacheFileExists) {
             try {
                 const contents = await this.keyCacheFile.toContentString();
-                return JSON.parse(contents);
+                keys = JSON.parse(contents);
             }
             catch (err) {
                 console.warn(err);
@@ -55,17 +56,19 @@ class LocalFileAdapter extends skytree_1.Actor {
                 keyCacheFileExists = false;
             }
         }
-        const files = await this.getDataFiles();
-        const result = await util_1.PromiseUtil.asyncValuesGivenArrayAndConverter(files, async (file) => {
-            let buffer = await file.toContentBuffer();
-            const portableValueResult = this.props.valueGivenBuffer(buffer);
-            if (portableValueResult.shouldRewriteStorage == true) {
-                buffer = this.props.bufferGivenValue(portableValueResult.value);
-                await file.writeFile(buffer);
-            }
-            return this.props.keyGivenValue(portableValueResult.value);
-        });
-        this._keys.sync(result);
+        if (keys == null) {
+            const files = await this.getDataFiles();
+            keys = await util_1.PromiseUtil.asyncValuesGivenArrayAndConverter(files, async (file) => {
+                let buffer = await file.toContentBuffer();
+                const portableValueResult = this.props.valueGivenBuffer(buffer);
+                if (portableValueResult.shouldRewriteStorage == true) {
+                    buffer = this.props.bufferGivenValue(portableValueResult.value);
+                    await file.writeFile(buffer);
+                }
+                return this.props.keyGivenValue(portableValueResult.value);
+            });
+        }
+        this._keys.sync(keys);
         if (keyCacheFileExists == false) {
             this.writeKeyCacheLater.invoke();
         }
