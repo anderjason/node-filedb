@@ -234,7 +234,7 @@ export class LocalFileAdapter<T>
     );
   }
 
-  private async fileGivenKey(key: string): Promise<LocalFile> {
+  async fileGivenKey(key: string): Promise<LocalFile> {
     if (key == null) {
       throw new Error("Key is required");
     }

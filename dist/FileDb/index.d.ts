@@ -29,6 +29,7 @@ export declare class FileDb<T> extends Actor<FileDbProps<T>> {
     onActivate(): void;
     get tags(): Tag[];
     get metrics(): Metric[];
+    get tagPrefixes(): string[];
     private load;
     toEntryKeys(options?: FileDbReadOptions): Promise<string[]>;
     hasEntry(entryKey: string): Promise<boolean>;

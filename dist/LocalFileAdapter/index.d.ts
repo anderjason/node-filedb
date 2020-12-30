@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { LocalDirectory } from "@anderjason/node-filesystem";
+import { LocalDirectory, LocalFile } from "@anderjason/node-filesystem";
 import { ReadOnlyObservable } from "@anderjason/observable";
 import { Actor } from "skytree";
 import { FileDbAdapter, PortableValueResult } from "../FileDbAdapters";
@@ -26,5 +26,5 @@ export declare class LocalFileAdapter<T> extends Actor<LocalFileAdapterProps<T>>
     private oldFileGivenKey;
     private oldFile2GivenKey;
     private newFileGivenKey;
-    private fileGivenKey;
+    fileGivenKey(key: string): Promise<LocalFile>;
 }

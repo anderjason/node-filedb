@@ -270,6 +270,9 @@ class FileDb extends skytree_1.Actor {
     get metrics() {
         return Object.values(this._metrics.toValues());
     }
+    get tagPrefixes() {
+        return this._tagPrefixes.toArray();
+    }
     async load() {
         if (this.isActive.value == false) {
             return;

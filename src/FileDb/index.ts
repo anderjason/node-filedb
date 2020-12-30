@@ -107,6 +107,10 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     return Object.values(this._metrics.toValues());
   }
 
+  get tagPrefixes(): string[] {
+    return this._tagPrefixes.toArray();
+  }
+
   private async load(): Promise<void> {
     if (this.isActive.value == false) {
       return;
