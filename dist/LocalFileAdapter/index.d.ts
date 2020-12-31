@@ -14,9 +14,7 @@ export declare class LocalFileAdapter<T> extends Actor<LocalFileAdapterProps<T>>
     private _isReady;
     readonly isReady: ReadOnlyObservable<boolean>;
     onActivate(): void;
-    writeKeyCache(): Promise<void>;
     toKeys(): Promise<string[]>;
-    private get keyCacheFile();
     private load;
     toValues(): Promise<T[]>;
     toOptionalValueGivenKey(key: string): Promise<T>;

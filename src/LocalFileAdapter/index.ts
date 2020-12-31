@@ -30,19 +30,6 @@ export class LocalFileAdapter<T>
 
   onActivate() {
     this.load();
-
-    this._keys.didChange.subscribe((keys) => {
-      if (this._isReady.value == false) {
-        return;
-      }
-
-      this.writeKeyCache();
-    });
-  }
-
-  async writeKeyCache(): Promise<void> {
-    const keyCacheContents = JSON.stringify(this._keys.toArray());
-    await this.keyCacheFile.writeFile(keyCacheContents);
   }
 
   async toKeys(): Promise<string[]> {
@@ -55,51 +42,28 @@ export class LocalFileAdapter<T>
     return this._keys.toArray();
   }
 
-  private get keyCacheFile(): LocalFile {
-    return LocalFile.givenRelativePath(this.props.directory, "keys.cache");
-  }
-
   private async load(): Promise<void> {
     await this.props.directory.createDirectory();
 
     let keys: string[];
+    const files = await this.getDataFiles();
 
-    let keyCacheFileExists = await this.keyCacheFile.isAccessible();
-    if (keyCacheFileExists) {
-      try {
-        const contents = await this.keyCacheFile.toContentString();
-        keys = JSON.parse(contents);
-      } catch (err) {
-        console.warn(err);
-        await this.keyCacheFile.deleteFile();
-        keyCacheFileExists = false;
-      }
-    }
+    keys = await PromiseUtil.asyncValuesGivenArrayAndConverter(
+      files,
+      async (file) => {
+        let buffer = await file.toContentBuffer();
+        const portableValueResult = this.props.valueGivenBuffer(buffer);
 
-    if (keys == null) {
-      const files = await this.getDataFiles();
-
-      keys = await PromiseUtil.asyncValuesGivenArrayAndConverter(
-        files,
-        async (file) => {
-          let buffer = await file.toContentBuffer();
-          const portableValueResult = this.props.valueGivenBuffer(buffer);
-
-          if (portableValueResult.shouldRewriteStorage == true) {
-            buffer = this.props.bufferGivenValue(portableValueResult.value);
-            await file.writeFile(buffer);
-          }
-
-          return this.props.keyGivenValue(portableValueResult.value);
+        if (portableValueResult.shouldRewriteStorage == true) {
+          buffer = this.props.bufferGivenValue(portableValueResult.value);
+          await file.writeFile(buffer);
         }
-      );
-    }
+
+        return this.props.keyGivenValue(portableValueResult.value);
+      }
+    );
 
     this._keys.sync(keys);
-
-    if (keyCacheFileExists == false) {
-      this.writeKeyCache();
-    }
 
     this._isReady.setValue(true);
   }

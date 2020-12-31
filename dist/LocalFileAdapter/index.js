@@ -16,16 +16,6 @@ class LocalFileAdapter extends skytree_1.Actor {
     }
     onActivate() {
         this.load();
-        this._keys.didChange.subscribe((keys) => {
-            if (this._isReady.value == false) {
-                return;
-            }
-            this.writeKeyCache();
-        });
-    }
-    async writeKeyCache() {
-        const keyCacheContents = JSON.stringify(this._keys.toArray());
-        await this.keyCacheFile.writeFile(keyCacheContents);
     }
     async toKeys() {
         if (this.isReady.value == true) {
@@ -34,40 +24,20 @@ class LocalFileAdapter extends skytree_1.Actor {
         await this._isReady.toPromise((v) => v == true);
         return this._keys.toArray();
     }
-    get keyCacheFile() {
-        return node_filesystem_1.LocalFile.givenRelativePath(this.props.directory, "keys.cache");
-    }
     async load() {
         await this.props.directory.createDirectory();
         let keys;
-        let keyCacheFileExists = await this.keyCacheFile.isAccessible();
-        if (keyCacheFileExists) {
-            try {
-                const contents = await this.keyCacheFile.toContentString();
-                keys = JSON.parse(contents);
+        const files = await this.getDataFiles();
+        keys = await util_1.PromiseUtil.asyncValuesGivenArrayAndConverter(files, async (file) => {
+            let buffer = await file.toContentBuffer();
+            const portableValueResult = this.props.valueGivenBuffer(buffer);
+            if (portableValueResult.shouldRewriteStorage == true) {
+                buffer = this.props.bufferGivenValue(portableValueResult.value);
+                await file.writeFile(buffer);
             }
-            catch (err) {
-                console.warn(err);
-                await this.keyCacheFile.deleteFile();
-                keyCacheFileExists = false;
-            }
-        }
-        if (keys == null) {
-            const files = await this.getDataFiles();
-            keys = await util_1.PromiseUtil.asyncValuesGivenArrayAndConverter(files, async (file) => {
-                let buffer = await file.toContentBuffer();
-                const portableValueResult = this.props.valueGivenBuffer(buffer);
-                if (portableValueResult.shouldRewriteStorage == true) {
-                    buffer = this.props.bufferGivenValue(portableValueResult.value);
-                    await file.writeFile(buffer);
-                }
-                return this.props.keyGivenValue(portableValueResult.value);
-            });
-        }
+            return this.props.keyGivenValue(portableValueResult.value);
+        });
         this._keys.sync(keys);
-        if (keyCacheFileExists == false) {
-            this.writeKeyCache();
-        }
         this._isReady.setValue(true);
     }
     async toValues() {
