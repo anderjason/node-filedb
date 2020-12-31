@@ -18,6 +18,9 @@ class Metric extends PropsObject_1.PropsObject {
     }
     async load() {
         const portableMetric = await this.props.adapter.toOptionalValueGivenKey(this.props.metricKey);
+        if (portableMetric == null) {
+            throw new Error(`Metrics adapter returned null for metricKey '${this.props.metricKey}'`);
+        }
         this.entryMetricValues.sync(portableMetric.entryMetricValues);
     }
     async save() {

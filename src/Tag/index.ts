@@ -34,6 +34,12 @@ export class Tag extends PropsObject<TagProps> {
       this.props.tagKey
     );
 
+    if (portableTag == null) {
+      throw new Error(
+        `Tags adapter returned null for tagKey '${this.props.tagKey}'`
+      );
+    }
+
     this.entryKeys.sync(portableTag.entryKeys);
   }
 

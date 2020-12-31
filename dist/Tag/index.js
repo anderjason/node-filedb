@@ -19,6 +19,9 @@ class Tag extends PropsObject_1.PropsObject {
     }
     async load() {
         const portableTag = await this.props.adapter.toOptionalValueGivenKey(this.props.tagKey);
+        if (portableTag == null) {
+            throw new Error(`Tags adapter returned null for tagKey '${this.props.tagKey}'`);
+        }
         this.entryKeys.sync(portableTag.entryKeys);
     }
     async save() {

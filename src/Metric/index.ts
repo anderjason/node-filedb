@@ -32,6 +32,12 @@ export class Metric extends PropsObject<MetricProps> {
       this.props.metricKey
     );
 
+    if (portableMetric == null) {
+      throw new Error(
+        `Metrics adapter returned null for metricKey '${this.props.metricKey}'`
+      );
+    }
+
     this.entryMetricValues.sync(portableMetric.entryMetricValues);
   }
 
