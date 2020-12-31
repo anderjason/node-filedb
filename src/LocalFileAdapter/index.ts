@@ -28,24 +28,21 @@ export class LocalFileAdapter<T>
   );
   readonly isReady = ReadOnlyObservable.givenObservable(this._isReady);
 
-  private writeKeyCacheLater = new Debounce({
-    fn: async () => {
-      const keyCacheContents = JSON.stringify(this._keys.toArray());
-      await this.keyCacheFile.writeFile(keyCacheContents);
-    },
-    duration: Duration.givenSeconds(0.5),
-  });
-
   onActivate() {
     this.load();
 
-    this._keys.didChange.subscribe(async (keys) => {
+    this._keys.didChange.subscribe((keys) => {
       if (this._isReady.value == false) {
         return;
       }
 
-      this.writeKeyCacheLater.invoke();
+      this.writeKeyCache();
     });
+  }
+
+  async writeKeyCache(): Promise<void> {
+    const keyCacheContents = JSON.stringify(this._keys.toArray());
+    await this.keyCacheFile.writeFile(keyCacheContents);
   }
 
   async toKeys(): Promise<string[]> {
@@ -101,7 +98,7 @@ export class LocalFileAdapter<T>
     this._keys.sync(keys);
 
     if (keyCacheFileExists == false) {
-      this.writeKeyCacheLater.invoke();
+      this.writeKeyCache();
     }
 
     this._isReady.setValue(true);

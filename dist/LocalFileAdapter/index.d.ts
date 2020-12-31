@@ -13,8 +13,8 @@ export declare class LocalFileAdapter<T> extends Actor<LocalFileAdapterProps<T>>
     private _keys;
     private _isReady;
     readonly isReady: ReadOnlyObservable<boolean>;
-    private writeKeyCacheLater;
     onActivate(): void;
+    writeKeyCache(): Promise<void>;
     toKeys(): Promise<string[]>;
     private get keyCacheFile();
     private load;

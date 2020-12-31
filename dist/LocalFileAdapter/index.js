@@ -4,7 +4,6 @@ exports.LocalFileAdapter = void 0;
 const node_crypto_1 = require("@anderjason/node-crypto");
 const node_filesystem_1 = require("@anderjason/node-filesystem");
 const observable_1 = require("@anderjason/observable");
-const time_1 = require("@anderjason/time");
 const util_1 = require("@anderjason/util");
 const skytree_1 = require("skytree");
 const rename_1 = require("./_internal/rename");
@@ -14,22 +13,19 @@ class LocalFileAdapter extends skytree_1.Actor {
         this._keys = observable_1.ObservableSet.ofEmpty();
         this._isReady = observable_1.Observable.givenValue(false, observable_1.Observable.isStrictEqual);
         this.isReady = observable_1.ReadOnlyObservable.givenObservable(this._isReady);
-        this.writeKeyCacheLater = new time_1.Debounce({
-            fn: async () => {
-                const keyCacheContents = JSON.stringify(this._keys.toArray());
-                await this.keyCacheFile.writeFile(keyCacheContents);
-            },
-            duration: time_1.Duration.givenSeconds(0.5),
-        });
     }
     onActivate() {
         this.load();
-        this._keys.didChange.subscribe(async (keys) => {
+        this._keys.didChange.subscribe((keys) => {
             if (this._isReady.value == false) {
                 return;
             }
-            this.writeKeyCacheLater.invoke();
+            this.writeKeyCache();
         });
+    }
+    async writeKeyCache() {
+        const keyCacheContents = JSON.stringify(this._keys.toArray());
+        await this.keyCacheFile.writeFile(keyCacheContents);
     }
     async toKeys() {
         if (this.isReady.value == true) {
@@ -70,7 +66,7 @@ class LocalFileAdapter extends skytree_1.Actor {
         }
         this._keys.sync(keys);
         if (keyCacheFileExists == false) {
-            this.writeKeyCacheLater.invoke();
+            this.writeKeyCache();
         }
         this._isReady.setValue(true);
     }
