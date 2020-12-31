@@ -423,7 +423,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
       entryKey: entry.entryKey,
       createdAtMs: entry.createdAt.value.toEpochMilliseconds(),
       updatedAtMs: entry.updatedAt.value.toEpochMilliseconds(),
-      data: entry.data,
+      data: entry.data.value,
     };
 
     if (entry.tagKeys != null && entry.tagKeys.count > 0) {

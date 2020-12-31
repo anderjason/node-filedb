@@ -120,7 +120,7 @@ class FileDb extends skytree_1.Actor {
                 entryKey: entry.entryKey,
                 createdAtMs: entry.createdAt.value.toEpochMilliseconds(),
                 updatedAtMs: entry.updatedAt.value.toEpochMilliseconds(),
-                data: entry.data,
+                data: entry.data.value,
             };
             if (entry.tagKeys != null && entry.tagKeys.count > 0) {
                 portableEntry.tagKeys = entry.tagKeys.toArray();
