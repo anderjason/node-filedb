@@ -8,5 +8,5 @@ export function bufferGivenPortableEntry(value: PortableEntry): Buffer {
   };
   delete obj.entryKey;
 
-  return Buffer.from(JSON.stringify(obj));
+  return Buffer.from(JSON.stringify(obj, null, 2));
 }
