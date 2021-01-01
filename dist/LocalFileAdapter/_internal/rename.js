@@ -2,7 +2,14 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.rename = void 0;
 const fs = require("fs");
-function rename(fromFile, toFile) {
+async function rename(fromFile, toFile) {
+    if (fromFile == null) {
+        throw new Error("fromFile is required");
+    }
+    if (toFile == null) {
+        throw new Error("toFile is required");
+    }
+    await toFile.toDirectory().createDirectory();
     return new Promise((resolve, reject) => {
         const fromPath = fromFile.toAbsolutePath();
         const toPath = toFile.toAbsolutePath();
