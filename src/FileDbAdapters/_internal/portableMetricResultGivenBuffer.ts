@@ -9,7 +9,7 @@ function portableMetricGivenVersion3(obj: any): PortableMetric {
   ]);
 
   return {
-    metricKey: obj.key,
+    key: obj.key,
     entryMetricValues: obj.entryMetricValues,
   };
 }

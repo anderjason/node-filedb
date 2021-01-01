@@ -1,57 +1,56 @@
 import { UniqueId } from "@anderjason/node-crypto";
-import {
-  Dict,
-  Observable,
-  ObservableDict,
-  ObservableSet,
-} from "@anderjason/observable";
+import { Dict } from "@anderjason/observable";
 import { Instant } from "@anderjason/time";
+import { PortableEntry, PortableEntryMetricValues } from "../FileDb/Types";
 import { PropsObject } from "../PropsObject";
 
 export interface EntryProps<T> {
-  entryKey?: string;
+  key?: string;
   data?: T;
   createdAt?: Instant;
   updatedAt?: Instant;
-  tagKeys?: Set<string>;
+  tagKeys?: string[];
   metricValues?: Dict<number>;
 }
 
 export class Entry<T> extends PropsObject<EntryProps<T>> {
-  readonly entryKey: string;
-  readonly tagKeys = ObservableSet.ofEmpty<string>();
-  readonly metricValues = ObservableDict.ofEmpty<number>();
-  readonly createdAt = Observable.ofEmpty<Instant>();
-  readonly updatedAt = Observable.ofEmpty<Instant>();
-  readonly data = Observable.ofEmpty<T>();
+  static givenPortableObject<T>(obj: PortableEntry): Entry<T> {
+    return new Entry<T>({
+      key: obj.key,
+      createdAt: Instant.givenEpochMilliseconds(obj.createdAtMs),
+      updatedAt: Instant.givenEpochMilliseconds(obj.updatedAtMs),
+      data: obj.data,
+      tagKeys: obj.tagKeys,
+      metricValues: obj.metricValues,
+    });
+  }
+
+  readonly key: string;
+  tagKeys: string[];
+  metricValues: Dict<number>;
+  createdAt: Instant;
+  updatedAt: Instant;
+  data: T;
 
   constructor(props: EntryProps<T>) {
     super(props);
 
-    this.entryKey = props.entryKey || UniqueId.ofRandom().toUUIDString();
-    this.data.setValue(props.data);
-    this.createdAt.setValue(props.createdAt || Instant.ofNow());
-    this.updatedAt.setValue(
-      props.updatedAt || props.createdAt || Instant.ofNow()
-    );
-
-    if (this.props.tagKeys != null) {
-      this.tagKeys.sync(this.props.tagKeys);
-    }
-
-    if (this.props.metricValues != null) {
-      this.metricValues.sync(this.props.metricValues);
-    }
+    this.key = props.key || UniqueId.ofRandom().toUUIDString();
+    this.data = props.data;
+    this.createdAt = props.createdAt || Instant.ofNow();
+    this.updatedAt = props.updatedAt || props.createdAt || Instant.ofNow();
+    this.tagKeys = props.tagKeys || [];
+    this.metricValues = props.metricValues || {};
   }
 
-  toObject(): any {
+  toPortableObject(): PortableEntry {
     return {
-      entryKey: this.entryKey,
-      tagKeys: this.tagKeys.toArray(),
-      metricValues: this.metricValues.toValues(),
-      createdAt: this.createdAt.value,
-      updatedAt: this.updatedAt.value,
-      data: this.data.value,
+      key: this.key,
+      tagKeys: this.tagKeys || [],
+      metricValues: this.metricValues || {},
+      createdAtMs: this.createdAt.toEpochMilliseconds(),
+      updatedAtMs: this.updatedAt.toEpochMilliseconds(),
+      data: this.data,
     };
   }
 }

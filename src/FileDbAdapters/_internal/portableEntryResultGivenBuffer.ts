@@ -13,7 +13,7 @@ function portableEntryGivenVersion3(obj: any): PortableEntry {
   ]);
 
   return {
-    entryKey: obj.key,
+    key: obj.key,
     createdAtMs: obj.createdAtMs,
     updatedAtMs: obj.updatedAtMs,
     data: obj.data,

@@ -6,7 +6,7 @@ function portableTagGivenVersion3(obj: any): PortableTag {
   ensureValuesExist(obj, "portableTagGivenVersion3", ["key", "entryKeys"]);
 
   return {
-    tagKey: obj.key,
+    key: obj.key,
     entryKeys: obj.entryKeys,
   };
 }

@@ -3,7 +3,6 @@ import { PortableEntry } from "../../FileDb/Types";
 export function bufferGivenPortableEntry(value: PortableEntry): Buffer {
   const obj = {
     version: 3,
-    key: value.entryKey,
     ...value,
   };
 

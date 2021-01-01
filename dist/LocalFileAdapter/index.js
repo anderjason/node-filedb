@@ -35,7 +35,7 @@ class LocalFileAdapter extends skytree_1.Actor {
                 buffer = this.props.bufferGivenValue(portableValueResult.value);
                 await file.writeFile(buffer);
             }
-            return this.props.keyGivenValue(portableValueResult.value);
+            return portableValueResult.value.key;
         });
         this._keys.sync(keys);
         this._isReady.setValue(true);
@@ -115,7 +115,7 @@ class LocalFileAdapter extends skytree_1.Actor {
             console.log(file.toAbsolutePath());
             let buffer = await file.toContentBuffer();
             const portableValueResult = this.props.valueGivenBuffer(buffer);
-            const key = this.props.keyGivenValue(portableValueResult.value);
+            const key = portableValueResult.value.key;
             buffer = this.props.bufferGivenValue(portableValueResult.value);
             await file.writeFile(buffer);
             const expectedFile = await this.fileGivenKey(key);

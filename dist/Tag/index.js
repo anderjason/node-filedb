@@ -1,19 +1,18 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Tag = void 0;
-const observable_1 = require("@anderjason/observable");
 const PropsObject_1 = require("../PropsObject");
 class Tag extends PropsObject_1.PropsObject {
     constructor(props) {
         super(props);
-        this.entryKeys = observable_1.ObservableSet.ofEmpty();
+        this.entryKeys = new Set();
         if (props.tagKey == null) {
             throw new Error("tagKey is required");
         }
         if (props.adapter == null) {
             throw new Error("adapter is required");
         }
-        this.tagKey = props.tagKey;
+        this.key = props.tagKey;
         this.tagPrefix = props.tagKey.split(":")[0];
     }
     async load() {
@@ -21,24 +20,20 @@ class Tag extends PropsObject_1.PropsObject {
         if (portableTag == null) {
             throw new Error(`Tags adapter returned null for tagKey '${this.props.tagKey}'`);
         }
-        this.entryKeys.sync(portableTag.entryKeys);
+        this.entryKeys = new Set(portableTag.entryKeys);
     }
     async save() {
-        if (this.entryKeys.count > 0) {
-            const contents = {
-                tagKey: this.props.tagKey,
-                entryKeys: this.entryKeys.toArray(),
-            };
-            await this.props.adapter.writeValue(this.props.tagKey, contents);
+        if (this.entryKeys.size > 0) {
+            await this.props.adapter.writeValue(this.props.tagKey, this.toPortableObject());
         }
         else {
             await this.props.adapter.deleteKey(this.props.tagKey);
         }
     }
-    toObject() {
+    toPortableObject() {
         return {
-            tagKey: this.tagKey,
-            entryKeys: this.entryKeys.toArray(),
+            key: this.key,
+            entryKeys: Array.from(this.entryKeys || new Set()),
         };
     }
 }

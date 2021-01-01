@@ -14,7 +14,6 @@ import {
   ObservableSet,
   ReadOnlyObservable,
 } from "@anderjason/observable";
-import { PortableEntry } from "./Types";
 
 export interface FileDbReadOptions {
   requireTagKeys?: string[];
@@ -70,7 +69,7 @@ type FileDbInstruction<T> =
 export interface FileDbProps<T> {
   adapters: FileDbAdapters;
 
-  tagKeysGivenEntryData: (data: T) => Set<string>;
+  tagKeysGivenEntryData: (data: T) => string[];
   metricsGivenEntryData: (data: T) => Dict<number>;
 
   cacheSize?: number;
@@ -304,21 +303,21 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     const changedTags = new Set<Tag>();
     const changedMetrics = new Set<Metric>();
 
-    existingRecord.tagKeys.toArray().forEach((tagKey) => {
+    existingRecord.tagKeys.forEach((tagKey) => {
       const tag = this._tags.toOptionalValueGivenKey(tagKey);
 
-      if (tag != null && tag.entryKeys.hasValue(entryKey)) {
-        tag.entryKeys.removeValue(entryKey);
+      if (tag != null && tag.entryKeys.has(entryKey)) {
+        tag.entryKeys.delete(entryKey);
         changedTags.add(tag);
       }
     });
 
-    const metricKeys = existingRecord.metricValues.toKeys();
+    const metricKeys = Object.keys(existingRecord.metricValues);
     metricKeys.forEach((metricKey) => {
       const metric = this._metrics.toOptionalValueGivenKey(metricKey);
 
-      if (metric != null && metric.entryMetricValues.hasKey(entryKey)) {
-        metric.entryMetricValues.removeKey(entryKey);
+      if (metric != null && metric.hasValueGivenEntryKey(entryKey)) {
+        metric.removeValueGivenEntryKey(entryKey);
         changedMetrics.add(metric);
       }
     });
@@ -368,14 +367,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
       return undefined;
     }
 
-    const result: Entry<T> = new Entry({
-      entryKey: portableEntry.entryKey,
-      createdAt: Instant.givenEpochMilliseconds(portableEntry.createdAtMs),
-      updatedAt: Instant.givenEpochMilliseconds(portableEntry.updatedAtMs),
-      data: portableEntry.data,
-      tagKeys: new Set(portableEntry.tagKeys),
-      metricValues: portableEntry.metricValues || {},
-    });
+    const result: Entry<T> = Entry.givenPortableObject<T>(portableEntry);
 
     this._entryCache.put(entryKey, result);
 
@@ -399,14 +391,14 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
       await this.ensureReady();
     }
 
-    let entry: Entry<T> | undefined = await this._readEntry(entryKey);
+    let entry: Entry<T> = await this._readEntry(entryKey);
 
-    const tagKeys: Set<string> = this.props.tagKeysGivenEntryData(entryData);
+    const tagKeys: string[] = this.props.tagKeysGivenEntryData(entryData);
     const metricValues = this.props.metricsGivenEntryData(entryData);
 
     if (entry == null) {
       entry = new Entry({
-        entryKey: entryKey,
+        key: entryKey,
         createdAt: time,
         updatedAt: time,
         data: entryData,
@@ -414,40 +406,22 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
         metricValues,
       });
     } else {
-      entry.updatedAt.setValue(time);
-      entry.tagKeys.sync(tagKeys);
-      entry.metricValues.sync(metricValues);
-      entry.data.setValue(entryData);
+      entry.updatedAt = time;
+      entry.tagKeys = tagKeys;
+      entry.metricValues = metricValues;
+      entry.data = entryData;
     }
+
+    entry.metricValues.createdAt = entry.createdAt.toEpochMilliseconds();
 
     this._entryCache.put(entryKey, entry);
 
-    const portableEntry: PortableEntry = {
-      entryKey: entry.entryKey,
-      createdAtMs: entry.createdAt.value.toEpochMilliseconds(),
-      updatedAtMs: entry.updatedAt.value.toEpochMilliseconds(),
-      data: entry.data.value,
-    };
-
-    if (entry.tagKeys != null && entry.tagKeys.count > 0) {
-      portableEntry.tagKeys = entry.tagKeys.toArray();
-    }
-
-    if (entry.metricValues == null) {
-      entry.metricValues.clear();
-    }
-
-    entry.metricValues.setValue(
-      "createdAt",
-      entry.createdAt.value.toEpochMilliseconds()
-    );
-
-    portableEntry.metricValues = entry.metricValues.toValues();
+    const portableEntry = entry.toPortableObject();
 
     const changedTags = new Set<Tag>();
     const changedMetrics = new Set<Metric>();
 
-    entry.tagKeys.toArray().forEach((tagKey) => {
+    entry.tagKeys.forEach((tagKey) => {
       let tag = this._tags.toOptionalValueGivenKey(tagKey);
       if (tag == null) {
         tag = new Tag({
@@ -457,13 +431,13 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
         this._tags.setValue(tagKey, tag);
       }
 
-      if (!tag.entryKeys.hasValue(entryKey)) {
-        tag.entryKeys.addValue(entryKey);
+      if (!tag.entryKeys.has(entryKey)) {
+        tag.entryKeys.add(entryKey);
         changedTags.add(tag);
       }
     });
 
-    const metricKeys = entry.metricValues.toKeys();
+    const metricKeys = Object.keys(entry.metricValues);
 
     metricKeys.forEach((metricKey) => {
       let metric = this._metrics.toOptionalValueGivenKey(metricKey);
@@ -475,13 +449,10 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
         this._metrics.setValue(metricKey, metric);
       }
 
-      const metricValue = entry.metricValues.toOptionalValueGivenKey(metricKey);
+      const metricValue = entry.metricValues[metricKey];
 
-      if (
-        metric.entryMetricValues.toOptionalValueGivenKey(entryKey) !==
-        metricValue
-      ) {
-        metric.entryMetricValues.setValue(entryKey, metricValue);
+      if (metric.toOptionalValueGivenEntryKey(entryKey) !== metricValue) {
+        metric.setEntryMetricValue(entryKey, metricValue);
         changedMetrics.add(metric);
       }
     });
@@ -526,7 +497,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
           return new Set<string>();
         }
 
-        return tag.entryKeys.toSet();
+        return tag.entryKeys;
       });
 
       entryKeys = Array.from(SetUtil.intersectionGivenSets(sets));
@@ -542,9 +513,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
       entryKeys = ArrayUtil.arrayWithOrderFromValue(
         entryKeys,
         (entryKey) => {
-          const metricValue = metric.entryMetricValues.toOptionalValueGivenKey(
-            entryKey
-          );
+          const metricValue = metric.toOptionalValueGivenEntryKey(entryKey);
           return metricValue || 0;
         },
         "ascending"

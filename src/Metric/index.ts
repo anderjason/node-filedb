@@ -1,8 +1,7 @@
-import { UnsaltedHash } from "@anderjason/node-crypto";
-import { ObservableDict } from "@anderjason/observable";
 import { FileDbAdapter } from "../FileDbAdapters";
 import { PropsObject } from "../PropsObject";
-import { PortableEntryMetricValues, PortableMetric } from "../FileDb/Types";
+import { PortableMetric } from "../FileDb/Types";
+import { Dict } from "@anderjason/observable";
 
 export interface MetricProps {
   metricKey: string;
@@ -10,8 +9,8 @@ export interface MetricProps {
 }
 
 export class Metric extends PropsObject<MetricProps> {
-  readonly metricKey: string;
-  readonly entryMetricValues = ObservableDict.ofEmpty<number>();
+  readonly key: string;
+  entryMetricValues: Dict<number> = {};
 
   constructor(props: MetricProps) {
     super(props);
@@ -24,7 +23,35 @@ export class Metric extends PropsObject<MetricProps> {
       throw new Error("adapter is required");
     }
 
-    this.metricKey = props.metricKey;
+    this.key = props.metricKey;
+  }
+
+  toOptionalValueGivenEntryKey(entryKey: string): number | undefined {
+    if (this.entryMetricValues == null) {
+      return undefined;
+    }
+
+    return this.entryMetricValues[entryKey];
+  }
+
+  setEntryMetricValue(entryKey: string, value: number): void {
+    if (this.entryMetricValues == null) {
+      this.entryMetricValues = {};
+    }
+
+    this.entryMetricValues[entryKey] = value;
+  }
+
+  hasValueGivenEntryKey(entryKey: string): boolean {
+    return this.toOptionalValueGivenEntryKey(entryKey) != null;
+  }
+
+  removeValueGivenEntryKey(metricKey: string): void {
+    if (this.entryMetricValues == null) {
+      return;
+    }
+
+    delete this.entryMetricValues[metricKey];
   }
 
   async load() {
@@ -38,34 +65,24 @@ export class Metric extends PropsObject<MetricProps> {
       );
     }
 
-    this.entryMetricValues.sync(portableMetric.entryMetricValues);
+    this.entryMetricValues = portableMetric.entryMetricValues || {};
   }
 
   async save(): Promise<void> {
     if (this.entryMetricValues.count > 0) {
-      const entryMetricValues: PortableEntryMetricValues = {};
-
-      this.entryMetricValues.toKeys().forEach((entryKey) => {
-        entryMetricValues[
-          entryKey
-        ] = this.entryMetricValues.toOptionalValueGivenKey(entryKey);
-      });
-
-      const contents = {
-        metricKey: this.props.metricKey,
-        entryMetricValues,
-      };
-
-      await this.props.adapter.writeValue(this.props.metricKey, contents);
+      await this.props.adapter.writeValue(
+        this.props.metricKey,
+        this.toPortableObject()
+      );
     } else {
       await this.props.adapter.deleteKey(this.props.metricKey);
     }
   }
 
-  toObject(): any {
+  toPortableObject(): PortableMetric {
     return {
-      metricKey: this.metricKey,
-      entryMetricValues: this.entryMetricValues.toValues(),
+      key: this.key,
+      entryMetricValues: this.entryMetricValues || {},
     };
   }
 }

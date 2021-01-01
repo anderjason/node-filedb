@@ -7,17 +7,17 @@ import {
 } from "@anderjason/observable";
 import { PromiseUtil } from "@anderjason/util";
 import { Actor } from "skytree";
+import { PortableKeyObject } from "../FileDb/Types";
 import { FileDbAdapter, PortableValueResult } from "../FileDbAdapters";
 import { rename } from "./_internal/rename";
 
 export interface LocalFileAdapterProps<T> {
   directory: LocalDirectory;
   valueGivenBuffer: (buffer: Buffer) => PortableValueResult<T>;
-  keyGivenValue: (value: T) => string;
   bufferGivenValue: (value: T) => Buffer;
 }
 
-export class LocalFileAdapter<T>
+export class LocalFileAdapter<T extends PortableKeyObject>
   extends Actor<LocalFileAdapterProps<T>>
   implements FileDbAdapter<T> {
   private _keys = ObservableSet.ofEmpty<string>();
@@ -59,7 +59,7 @@ export class LocalFileAdapter<T>
           await file.writeFile(buffer);
         }
 
-        return this.props.keyGivenValue(portableValueResult.value);
+        return portableValueResult.value.key;
       }
     );
 
@@ -180,7 +180,7 @@ export class LocalFileAdapter<T>
 
         let buffer = await file.toContentBuffer();
         const portableValueResult = this.props.valueGivenBuffer(buffer);
-        const key = this.props.keyGivenValue(portableValueResult.value);
+        const key = portableValueResult.value.key;
 
         buffer = this.props.bufferGivenValue(portableValueResult.value);
         await file.writeFile(buffer);

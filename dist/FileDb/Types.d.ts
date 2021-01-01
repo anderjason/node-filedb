@@ -1,17 +1,17 @@
 export declare type MetricValue = number;
-export interface PortableTag {
-    tagKey: string;
+export interface PortableKeyObject {
+    readonly key: string;
+}
+export interface PortableTag extends PortableKeyObject {
     entryKeys: string[];
 }
 export interface PortableEntryMetricValues {
     [entryKey: string]: MetricValue;
 }
-export interface PortableMetric {
-    metricKey: string;
+export interface PortableMetric extends PortableKeyObject {
     entryMetricValues: PortableEntryMetricValues;
 }
-export interface PortableEntry {
-    entryKey: string;
+export interface PortableEntry extends PortableKeyObject {
     createdAtMs: number;
     updatedAtMs: number;
     data: any;

@@ -2,36 +2,36 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Entry = void 0;
 const node_crypto_1 = require("@anderjason/node-crypto");
-const observable_1 = require("@anderjason/observable");
 const time_1 = require("@anderjason/time");
 const PropsObject_1 = require("../PropsObject");
 class Entry extends PropsObject_1.PropsObject {
     constructor(props) {
         super(props);
-        this.tagKeys = observable_1.ObservableSet.ofEmpty();
-        this.metricValues = observable_1.ObservableDict.ofEmpty();
-        this.createdAt = observable_1.Observable.ofEmpty();
-        this.updatedAt = observable_1.Observable.ofEmpty();
-        this.data = observable_1.Observable.ofEmpty();
-        this.entryKey = props.entryKey || node_crypto_1.UniqueId.ofRandom().toUUIDString();
-        this.data.setValue(props.data);
-        this.createdAt.setValue(props.createdAt || time_1.Instant.ofNow());
-        this.updatedAt.setValue(props.updatedAt || props.createdAt || time_1.Instant.ofNow());
-        if (this.props.tagKeys != null) {
-            this.tagKeys.sync(this.props.tagKeys);
-        }
-        if (this.props.metricValues != null) {
-            this.metricValues.sync(this.props.metricValues);
-        }
+        this.key = props.key || node_crypto_1.UniqueId.ofRandom().toUUIDString();
+        this.data = props.data;
+        this.createdAt = props.createdAt || time_1.Instant.ofNow();
+        this.updatedAt = props.updatedAt || props.createdAt || time_1.Instant.ofNow();
+        this.tagKeys = props.tagKeys || [];
+        this.metricValues = props.metricValues || {};
     }
-    toObject() {
+    static givenPortableObject(obj) {
+        return new Entry({
+            key: obj.key,
+            createdAt: time_1.Instant.givenEpochMilliseconds(obj.createdAtMs),
+            updatedAt: time_1.Instant.givenEpochMilliseconds(obj.updatedAtMs),
+            data: obj.data,
+            tagKeys: obj.tagKeys,
+            metricValues: obj.metricValues,
+        });
+    }
+    toPortableObject() {
         return {
-            entryKey: this.entryKey,
-            tagKeys: this.tagKeys.toArray(),
-            metricValues: this.metricValues.toValues(),
-            createdAt: this.createdAt.value,
-            updatedAt: this.updatedAt.value,
-            data: this.data.value,
+            key: this.key,
+            tagKeys: this.tagKeys || [],
+            metricValues: this.metricValues || {},
+            createdAtMs: this.createdAt.toEpochMilliseconds(),
+            updatedAtMs: this.updatedAt.toEpochMilliseconds(),
+            data: this.data,
         };
     }
 }

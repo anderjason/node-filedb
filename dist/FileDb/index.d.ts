@@ -12,7 +12,7 @@ export interface FileDbReadOptions {
 }
 export interface FileDbProps<T> {
     adapters: FileDbAdapters;
-    tagKeysGivenEntryData: (data: T) => Set<string>;
+    tagKeysGivenEntryData: (data: T) => string[];
     metricsGivenEntryData: (data: T) => Dict<number>;
     cacheSize?: number;
 }

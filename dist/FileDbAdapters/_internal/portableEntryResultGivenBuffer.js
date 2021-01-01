@@ -12,7 +12,7 @@ function portableEntryGivenVersion3(obj) {
         "metricValues",
     ]);
     return {
-        entryKey: obj.key,
+        key: obj.key,
         createdAtMs: obj.createdAtMs,
         updatedAtMs: obj.updatedAtMs,
         data: obj.data,

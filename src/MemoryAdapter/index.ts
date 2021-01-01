@@ -1,7 +1,10 @@
 import { Actor } from "skytree";
+import { PortableKeyObject } from "../FileDb/Types";
 import { FileDbAdapter } from "../FileDbAdapters";
 
-export class MemoryAdapter<T> extends Actor<void> implements FileDbAdapter<T> {
+export class MemoryAdapter<T extends PortableKeyObject>
+  extends Actor<void>
+  implements FileDbAdapter<T> {
   private _data = new Map<string, T>();
 
   async toKeys(): Promise<string[]> {

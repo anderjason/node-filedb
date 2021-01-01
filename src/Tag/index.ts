@@ -1,4 +1,3 @@
-import { ObservableSet } from "@anderjason/observable";
 import { FileDbAdapter } from "../FileDbAdapters";
 import { PropsObject } from "../PropsObject";
 import { PortableTag } from "../FileDb/Types";
@@ -10,8 +9,8 @@ export interface TagProps {
 
 export class Tag extends PropsObject<TagProps> {
   readonly tagPrefix: string;
-  readonly tagKey: string;
-  readonly entryKeys = ObservableSet.ofEmpty<string>();
+  readonly key: string;
+  entryKeys = new Set<string>();
 
   constructor(props: TagProps) {
     super(props);
@@ -24,7 +23,7 @@ export class Tag extends PropsObject<TagProps> {
       throw new Error("adapter is required");
     }
 
-    this.tagKey = props.tagKey;
+    this.key = props.tagKey;
     this.tagPrefix = props.tagKey.split(":")[0];
   }
 
@@ -39,26 +38,24 @@ export class Tag extends PropsObject<TagProps> {
       );
     }
 
-    this.entryKeys.sync(portableTag.entryKeys);
+    this.entryKeys = new Set(portableTag.entryKeys);
   }
 
   async save(): Promise<void> {
-    if (this.entryKeys.count > 0) {
-      const contents = {
-        tagKey: this.props.tagKey,
-        entryKeys: this.entryKeys.toArray(),
-      };
-
-      await this.props.adapter.writeValue(this.props.tagKey, contents);
+    if (this.entryKeys.size > 0) {
+      await this.props.adapter.writeValue(
+        this.props.tagKey,
+        this.toPortableObject()
+      );
     } else {
       await this.props.adapter.deleteKey(this.props.tagKey);
     }
   }
 
-  toObject(): any {
+  toPortableObject(): PortableTag {
     return {
-      tagKey: this.tagKey,
-      entryKeys: this.entryKeys.toArray(),
+      key: this.key,
+      entryKeys: Array.from(this.entryKeys || new Set()),
     };
   }
 }

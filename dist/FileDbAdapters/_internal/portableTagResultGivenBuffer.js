@@ -5,7 +5,7 @@ const ensureValuesExist_1 = require("./ensureValuesExist");
 function portableTagGivenVersion3(obj) {
     ensureValuesExist_1.ensureValuesExist(obj, "portableTagGivenVersion3", ["key", "entryKeys"]);
     return {
-        tagKey: obj.key,
+        key: obj.key,
         entryKeys: obj.entryKeys,
     };
 }
