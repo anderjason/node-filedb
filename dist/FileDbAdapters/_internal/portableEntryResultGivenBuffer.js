@@ -29,7 +29,32 @@ function portableEntryGivenVersion2(obj) {
         "tagKeys",
         "metricValues",
     ]);
-    return obj;
+    return {
+        entryKey: obj.entryKey,
+        createdAtMs: obj.createdAtMs,
+        updatedAtMs: obj.updatedAtMs,
+        data: obj.data,
+        tagKeys: obj.collections,
+        metricValues: obj.valuesByIndex,
+    };
+}
+function portableEntryGivenVersion3(obj) {
+    ensureValuesExist_1.ensureValuesExist(obj, "portableEntryGivenVersion2", [
+        "key",
+        "createdAtMs",
+        "updatedAtMs",
+        "data",
+        "tagKeys",
+        "metricValues",
+    ]);
+    return {
+        entryKey: obj.key,
+        createdAtMs: obj.createdAtMs,
+        updatedAtMs: obj.updatedAtMs,
+        data: obj.data,
+        tagKeys: obj.collections,
+        metricValues: obj.valuesByIndex,
+    };
 }
 function portableEntryResultGivenBuffer(buffer) {
     const obj = JSON.parse(buffer.toString());
@@ -43,6 +68,11 @@ function portableEntryResultGivenBuffer(buffer) {
         case 2:
             return {
                 value: portableEntryGivenVersion2(obj),
+                shouldRewriteStorage: false,
+            };
+        case 3:
+            return {
+                value: portableEntryGivenVersion3(obj),
                 shouldRewriteStorage: false,
             };
         default:

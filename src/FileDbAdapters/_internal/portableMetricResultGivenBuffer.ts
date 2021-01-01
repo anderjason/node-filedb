@@ -20,7 +20,22 @@ function portableMetricGivenVersion2(obj: any): PortableMetric {
     "entryMetricValues",
   ]);
 
-  return obj;
+  return {
+    metricKey: obj.metricKey,
+    entryMetricValues: obj.valuesByKey,
+  };
+}
+
+function portableMetricGivenVersion3(obj: any): PortableMetric {
+  ensureValuesExist(obj, "portableMetricGivenVersion2", [
+    "key",
+    "entryMetricValues",
+  ]);
+
+  return {
+    metricKey: obj.key,
+    entryMetricValues: obj.valuesByKey,
+  };
 }
 
 export function portableMetricResultGivenBuffer(
@@ -39,6 +54,11 @@ export function portableMetricResultGivenBuffer(
     case 2:
       return {
         value: portableMetricGivenVersion2(obj),
+        shouldRewriteStorage: false,
+      };
+    case 3:
+      return {
+        value: portableMetricGivenVersion3(obj),
         shouldRewriteStorage: false,
       };
     default:

@@ -230,6 +230,8 @@ export class LocalFileAdapter<T>
     await PromiseUtil.asyncSequenceGivenArrayAndCallback(
       files,
       async (file) => {
+        console.log(file.toAbsolutePath());
+
         let buffer = await file.toContentBuffer();
         const portableValueResult = this.props.valueGivenBuffer(buffer);
         const key = this.props.keyGivenValue(portableValueResult.value);

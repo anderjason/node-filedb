@@ -11,7 +11,17 @@ function portableTagGivenVersion1(obj) {
 }
 function portableTagGivenVersion2(obj) {
     ensureValuesExist_1.ensureValuesExist(obj, "portableTagGivenVersion2", ["tagKey", "entryKeys"]);
-    return obj;
+    return {
+        tagKey: obj.tagKey,
+        entryKeys: obj.entryKeys,
+    };
+}
+function portableTagGivenVersion3(obj) {
+    ensureValuesExist_1.ensureValuesExist(obj, "portableTagGivenVersion3", ["key", "entryKeys"]);
+    return {
+        tagKey: obj.key,
+        entryKeys: obj.entryKeys,
+    };
 }
 function portableTagResultGivenBuffer(buffer) {
     const obj = JSON.parse(buffer.toString());
@@ -25,6 +35,11 @@ function portableTagResultGivenBuffer(buffer) {
         case 2:
             return {
                 value: portableTagGivenVersion2(obj),
+                shouldRewriteStorage: false,
+            };
+        case 3:
+            return {
+                value: portableTagGivenVersion3(obj),
                 shouldRewriteStorage: false,
             };
         default:

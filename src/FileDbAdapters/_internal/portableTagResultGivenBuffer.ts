@@ -14,7 +14,19 @@ function portableTagGivenVersion1(obj: any): PortableTag {
 function portableTagGivenVersion2(obj: any): PortableTag {
   ensureValuesExist(obj, "portableTagGivenVersion2", ["tagKey", "entryKeys"]);
 
-  return obj;
+  return {
+    tagKey: obj.tagKey,
+    entryKeys: obj.entryKeys,
+  };
+}
+
+function portableTagGivenVersion3(obj: any): PortableTag {
+  ensureValuesExist(obj, "portableTagGivenVersion3", ["key", "entryKeys"]);
+
+  return {
+    tagKey: obj.key,
+    entryKeys: obj.entryKeys,
+  };
 }
 
 export function portableTagResultGivenBuffer(
@@ -33,6 +45,11 @@ export function portableTagResultGivenBuffer(
     case 2:
       return {
         value: portableTagGivenVersion2(obj),
+        shouldRewriteStorage: false,
+      };
+    case 3:
+      return {
+        value: portableTagGivenVersion3(obj),
         shouldRewriteStorage: false,
       };
     default:
