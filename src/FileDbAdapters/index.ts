@@ -34,6 +34,10 @@ interface FileDbAdaptersProps {
 }
 
 export class FileDbAdapters extends Actor<FileDbAdaptersProps> {
+  readonly tagsAdapter: FileDbAdapter<PortableTag>;
+  readonly entriesAdapter: FileDbAdapter<PortableEntry>;
+  readonly metricsAdapter: FileDbAdapter<PortableMetric>;
+
   static ofMemory(): FileDbAdapters {
     return new FileDbAdapters({
       tagsAdapter: new MemoryAdapter(),
@@ -65,9 +69,17 @@ export class FileDbAdapters extends Actor<FileDbAdaptersProps> {
     });
   }
 
+  constructor(props: FileDbAdaptersProps) {
+    super(props);
+
+    this.tagsAdapter = props.tagsAdapter;
+    this.metricsAdapter = props.metricsAdapter;
+    this.entriesAdapter = props.entriesAdapter;
+  }
+
   onActivate() {
-    this.addActor(this.props.tagsAdapter);
-    this.addActor(this.props.entriesAdapter);
-    this.addActor(this.props.metricsAdapter);
+    this.addActor(this.tagsAdapter);
+    this.addActor(this.entriesAdapter);
+    this.addActor(this.metricsAdapter);
   }
 }

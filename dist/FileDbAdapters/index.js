@@ -15,6 +15,12 @@ const portableEntryResultGivenBuffer_1 = require("./_internal/portableEntryResul
 const portableMetricResultGivenBuffer_1 = require("./_internal/portableMetricResultGivenBuffer");
 const portableTagResultGivenBuffer_1 = require("./_internal/portableTagResultGivenBuffer");
 class FileDbAdapters extends skytree_1.Actor {
+    constructor(props) {
+        super(props);
+        this.tagsAdapter = props.tagsAdapter;
+        this.metricsAdapter = props.metricsAdapter;
+        this.entriesAdapter = props.entriesAdapter;
+    }
     static ofMemory() {
         return new FileDbAdapters({
             tagsAdapter: new MemoryAdapter_1.MemoryAdapter(),
@@ -45,9 +51,9 @@ class FileDbAdapters extends skytree_1.Actor {
         });
     }
     onActivate() {
-        this.addActor(this.props.tagsAdapter);
-        this.addActor(this.props.entriesAdapter);
-        this.addActor(this.props.metricsAdapter);
+        this.addActor(this.tagsAdapter);
+        this.addActor(this.entriesAdapter);
+        this.addActor(this.metricsAdapter);
     }
 }
 exports.FileDbAdapters = FileDbAdapters;

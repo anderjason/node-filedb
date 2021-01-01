@@ -19,8 +19,12 @@ interface FileDbAdaptersProps {
     metricsAdapter: FileDbAdapter<PortableMetric>;
 }
 export declare class FileDbAdapters extends Actor<FileDbAdaptersProps> {
+    readonly tagsAdapter: FileDbAdapter<PortableTag>;
+    readonly entriesAdapter: FileDbAdapter<PortableEntry>;
+    readonly metricsAdapter: FileDbAdapter<PortableMetric>;
     static ofMemory(): FileDbAdapters;
     static givenDirectory(directory: LocalDirectory): FileDbAdapters;
+    constructor(props: FileDbAdaptersProps);
     onActivate(): void;
 }
 export {};
