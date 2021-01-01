@@ -87,9 +87,12 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
   private _allEntryKeys = Observable.ofEmpty<string[]>();
   private _instructions: FileDbInstruction<T>[] = [];
 
+  readonly adapters: FileDbAdapters;
+
   constructor(props: FileDbProps<T>) {
     super(props);
 
+    this.adapters = props.adapters;
     this._entryCache = new LRUCache<Entry<T>>(props.cacheSize || 10);
   }
 

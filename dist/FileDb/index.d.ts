@@ -25,6 +25,7 @@ export declare class FileDb<T> extends Actor<FileDbProps<T>> {
     private _metrics;
     private _allEntryKeys;
     private _instructions;
+    readonly adapters: FileDbAdapters;
     constructor(props: FileDbProps<T>);
     onActivate(): void;
     get tags(): Tag[];
