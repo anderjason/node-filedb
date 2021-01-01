@@ -144,6 +144,18 @@ class LocalFileAdapter extends skytree_1.Actor {
         }
         return newFile;
     }
+    async rebuild() {
+        const files = await this.getDataFiles();
+        await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(files, async (file) => {
+            let buffer = await file.toContentBuffer();
+            const portableValueResult = this.props.valueGivenBuffer(buffer);
+            const key = this.props.keyGivenValue(portableValueResult.value);
+            buffer = this.props.bufferGivenValue(portableValueResult.value);
+            await file.writeFile(buffer);
+            const expectedFile = this.newFileGivenKey(key);
+            await rename_1.rename(file, expectedFile);
+        });
+    }
 }
 exports.LocalFileAdapter = LocalFileAdapter;
 //# sourceMappingURL=index.js.map

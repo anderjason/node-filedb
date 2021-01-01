@@ -24,6 +24,7 @@ export interface FileDbAdapter<T> extends Actor {
   toOptionalValueGivenKey(key: string): Promise<T>;
   writeValue(key: string, value: T): Promise<void>;
   deleteKey(key: string): Promise<void>;
+  rebuild(): Promise<void>;
 }
 
 interface FileDbAdaptersProps {

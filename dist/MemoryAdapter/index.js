@@ -37,6 +37,9 @@ class MemoryAdapter extends skytree_1.Actor {
         }
         this._data.delete(key);
     }
+    async rebuild() {
+        return;
+    }
 }
 exports.MemoryAdapter = MemoryAdapter;
 //# sourceMappingURL=index.js.map

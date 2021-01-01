@@ -5,7 +5,6 @@ import {
   ObservableSet,
   ReadOnlyObservable,
 } from "@anderjason/observable";
-import { Debounce, Duration } from "@anderjason/time";
 import { PromiseUtil } from "@anderjason/util";
 import { Actor } from "skytree";
 import { FileDbAdapter, PortableValueResult } from "../FileDbAdapters";
@@ -46,6 +45,7 @@ export class LocalFileAdapter<T>
     await this.props.directory.createDirectory();
 
     let keys: string[];
+
     const files = await this.getDataFiles();
 
     keys = await PromiseUtil.asyncValuesGivenArrayAndConverter(
@@ -223,5 +223,23 @@ export class LocalFileAdapter<T>
     }
 
     return newFile;
+  }
+
+  async rebuild(): Promise<void> {
+    const files = await this.getDataFiles();
+    await PromiseUtil.asyncSequenceGivenArrayAndCallback(
+      files,
+      async (file) => {
+        let buffer = await file.toContentBuffer();
+        const portableValueResult = this.props.valueGivenBuffer(buffer);
+        const key = this.props.keyGivenValue(portableValueResult.value);
+
+        buffer = this.props.bufferGivenValue(portableValueResult.value);
+        await file.writeFile(buffer);
+
+        const expectedFile = this.newFileGivenKey(key);
+        await rename(file, expectedFile);
+      }
+    );
   }
 }

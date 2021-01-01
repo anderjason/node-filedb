@@ -7,4 +7,5 @@ export declare class MemoryAdapter<T> extends Actor<void> implements FileDbAdapt
     toOptionalValueGivenKey(key: string): Promise<T>;
     writeValue(key: string, value: T): Promise<void>;
     deleteKey(key: string): Promise<void>;
+    rebuild(): Promise<void>;
 }

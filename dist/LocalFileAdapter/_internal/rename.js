@@ -4,7 +4,13 @@ exports.rename = void 0;
 const fs = require("fs");
 function rename(fromFile, toFile) {
     return new Promise((resolve, reject) => {
-        fs.rename(fromFile.toAbsolutePath(), toFile.toAbsolutePath(), (err) => {
+        const fromPath = fromFile.toAbsolutePath();
+        const toPath = toFile.toAbsolutePath();
+        if (fromPath === toPath) {
+            resolve();
+            return;
+        }
+        fs.rename(fromPath, toPath, (err) => {
             if (err) {
                 reject(err);
                 return;

@@ -43,4 +43,8 @@ export class MemoryAdapter<T> extends Actor<void> implements FileDbAdapter<T> {
 
     this._data.delete(key);
   }
+
+  async rebuild(): Promise<void> {
+    return;
+  }
 }
