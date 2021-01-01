@@ -2,8 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.portableEntryResultGivenBuffer = void 0;
 const ensureValuesExist_1 = require("./ensureValuesExist");
-function portableEntryGivenVersion1(obj) {
-    ensureValuesExist_1.ensureValuesExist(obj, "portableEntryGivenVersion1", [
+function portableEntryGivenVersion1(was) {
+    ensureValuesExist_1.ensureValuesExist(was, "portableEntryGivenVersion1", [
         "key",
         "createdAtMs",
         "updatedAtMs",
@@ -12,16 +12,16 @@ function portableEntryGivenVersion1(obj) {
         "valuesByIndex",
     ]);
     return {
-        entryKey: obj.key,
-        createdAtMs: obj.createdAtMs,
-        updatedAtMs: obj.updatedAtMs,
-        data: obj.data,
-        tagKeys: obj.collections,
-        metricValues: obj.valuesByIndex,
+        entryKey: was.key,
+        createdAtMs: was.createdAtMs,
+        updatedAtMs: was.updatedAtMs,
+        data: was.data,
+        tagKeys: was.collections,
+        metricValues: was.valuesByIndex,
     };
 }
-function portableEntryGivenVersion2(obj) {
-    ensureValuesExist_1.ensureValuesExist(obj, "portableEntryGivenVersion2", [
+function portableEntryGivenVersion2(was) {
+    ensureValuesExist_1.ensureValuesExist(was, "portableEntryGivenVersion2", [
         "entryKey",
         "createdAtMs",
         "updatedAtMs",
@@ -30,16 +30,16 @@ function portableEntryGivenVersion2(obj) {
         "metricValues",
     ]);
     return {
-        entryKey: obj.entryKey,
-        createdAtMs: obj.createdAtMs,
-        updatedAtMs: obj.updatedAtMs,
-        data: obj.data,
-        tagKeys: obj.collections,
-        metricValues: obj.valuesByIndex,
+        entryKey: was.entryKey,
+        createdAtMs: was.createdAtMs,
+        updatedAtMs: was.updatedAtMs,
+        data: was.data,
+        tagKeys: was.collections,
+        metricValues: was.valuesByIndex,
     };
 }
-function portableEntryGivenVersion3(obj) {
-    ensureValuesExist_1.ensureValuesExist(obj, "portableEntryGivenVersion2", [
+function portableEntryGivenVersion3(was) {
+    ensureValuesExist_1.ensureValuesExist(was, "portableEntryGivenVersion3", [
         "key",
         "createdAtMs",
         "updatedAtMs",
@@ -48,12 +48,12 @@ function portableEntryGivenVersion3(obj) {
         "metricValues",
     ]);
     return {
-        entryKey: obj.key,
-        createdAtMs: obj.createdAtMs,
-        updatedAtMs: obj.updatedAtMs,
-        data: obj.data,
-        tagKeys: obj.collections,
-        metricValues: obj.valuesByIndex,
+        entryKey: was.key,
+        createdAtMs: was.createdAtMs,
+        updatedAtMs: was.updatedAtMs,
+        data: was.data,
+        tagKeys: was.tagKeys,
+        metricValues: was.metricValues,
     };
 }
 function portableEntryResultGivenBuffer(buffer) {

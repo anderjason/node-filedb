@@ -34,7 +34,7 @@ function portableMetricGivenVersion3(obj: any): PortableMetric {
 
   return {
     metricKey: obj.key,
-    entryMetricValues: obj.valuesByKey,
+    entryMetricValues: obj.entryMetricValues,
   };
 }
 

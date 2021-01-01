@@ -2,8 +2,8 @@ import { PortableValueResult } from "..";
 import { PortableEntry } from "../../FileDb/Types";
 import { ensureValuesExist } from "./ensureValuesExist";
 
-function portableEntryGivenVersion1(obj: any): PortableEntry {
-  ensureValuesExist(obj, "portableEntryGivenVersion1", [
+function portableEntryGivenVersion1(was: any): PortableEntry {
+  ensureValuesExist(was, "portableEntryGivenVersion1", [
     "key",
     "createdAtMs",
     "updatedAtMs",
@@ -13,17 +13,17 @@ function portableEntryGivenVersion1(obj: any): PortableEntry {
   ]);
 
   return {
-    entryKey: obj.key,
-    createdAtMs: obj.createdAtMs,
-    updatedAtMs: obj.updatedAtMs,
-    data: obj.data,
-    tagKeys: obj.collections,
-    metricValues: obj.valuesByIndex,
+    entryKey: was.key,
+    createdAtMs: was.createdAtMs,
+    updatedAtMs: was.updatedAtMs,
+    data: was.data,
+    tagKeys: was.collections,
+    metricValues: was.valuesByIndex,
   };
 }
 
-function portableEntryGivenVersion2(obj: any): PortableEntry {
-  ensureValuesExist(obj, "portableEntryGivenVersion2", [
+function portableEntryGivenVersion2(was: any): PortableEntry {
+  ensureValuesExist(was, "portableEntryGivenVersion2", [
     "entryKey",
     "createdAtMs",
     "updatedAtMs",
@@ -33,17 +33,17 @@ function portableEntryGivenVersion2(obj: any): PortableEntry {
   ]);
 
   return {
-    entryKey: obj.entryKey,
-    createdAtMs: obj.createdAtMs,
-    updatedAtMs: obj.updatedAtMs,
-    data: obj.data,
-    tagKeys: obj.collections,
-    metricValues: obj.valuesByIndex,
+    entryKey: was.entryKey,
+    createdAtMs: was.createdAtMs,
+    updatedAtMs: was.updatedAtMs,
+    data: was.data,
+    tagKeys: was.collections,
+    metricValues: was.valuesByIndex,
   };
 }
 
-function portableEntryGivenVersion3(obj: any): PortableEntry {
-  ensureValuesExist(obj, "portableEntryGivenVersion2", [
+function portableEntryGivenVersion3(was: any): PortableEntry {
+  ensureValuesExist(was, "portableEntryGivenVersion3", [
     "key",
     "createdAtMs",
     "updatedAtMs",
@@ -53,12 +53,12 @@ function portableEntryGivenVersion3(obj: any): PortableEntry {
   ]);
 
   return {
-    entryKey: obj.key,
-    createdAtMs: obj.createdAtMs,
-    updatedAtMs: obj.updatedAtMs,
-    data: obj.data,
-    tagKeys: obj.collections,
-    metricValues: obj.valuesByIndex,
+    entryKey: was.key,
+    createdAtMs: was.createdAtMs,
+    updatedAtMs: was.updatedAtMs,
+    data: was.data,
+    tagKeys: was.tagKeys,
+    metricValues: was.metricValues,
   };
 }
 

@@ -29,7 +29,7 @@ function portableMetricGivenVersion3(obj) {
     ]);
     return {
         metricKey: obj.key,
-        entryMetricValues: obj.valuesByKey,
+        entryMetricValues: obj.entryMetricValues,
     };
 }
 function portableMetricResultGivenBuffer(buffer) {
