@@ -9,7 +9,12 @@ async function rename(fromFile, toFile) {
     if (toFile == null) {
         throw new Error("toFile is required");
     }
-    await toFile.toDirectory().createDirectory();
+    try {
+        await toFile.toDirectory().createDirectory();
+    }
+    catch (_a) {
+        //
+    }
     return new Promise((resolve, reject) => {
         const fromPath = fromFile.toAbsolutePath();
         const toPath = toFile.toAbsolutePath();

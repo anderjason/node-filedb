@@ -25,7 +25,12 @@ class LocalFileAdapter extends skytree_1.Actor {
         return this._keys.toArray();
     }
     async load() {
-        await this.props.directory.createDirectory();
+        try {
+            await this.props.directory.createDirectory();
+        }
+        catch (_a) {
+            //
+        }
         let keys;
         const files = await this.getDataFiles();
         keys = await util_1.PromiseUtil.asyncValuesGivenArrayAndConverter(files, async (file) => {
@@ -41,7 +46,12 @@ class LocalFileAdapter extends skytree_1.Actor {
         this._isReady.setValue(true);
     }
     async toValues() {
-        await this.props.directory.createDirectory();
+        try {
+            await this.props.directory.createDirectory();
+        }
+        catch (_a) {
+            //
+        }
         const files = await this.getDataFiles();
         const result = await util_1.PromiseUtil.asyncValuesGivenArrayAndConverter(files, async (file) => {
             let buffer = await file.toContentBuffer();
@@ -76,7 +86,12 @@ class LocalFileAdapter extends skytree_1.Actor {
             throw new Error("Key is required");
         }
         const file = await this.fileGivenKey(key);
-        await file.toDirectory().createDirectory();
+        try {
+            await file.toDirectory().createDirectory();
+        }
+        catch (_a) {
+            //
+        }
         const buffer = this.props.bufferGivenValue(value);
         await file.writeFile(buffer);
         this._keys.addValue(key);

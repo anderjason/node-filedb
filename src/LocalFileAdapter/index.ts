@@ -42,7 +42,11 @@ export class LocalFileAdapter<T extends PortableKeyObject>
   }
 
   private async load(): Promise<void> {
-    await this.props.directory.createDirectory();
+    try {
+      await this.props.directory.createDirectory();
+    } catch {
+      //
+    }
 
     let keys: string[];
 
@@ -69,7 +73,11 @@ export class LocalFileAdapter<T extends PortableKeyObject>
   }
 
   async toValues(): Promise<T[]> {
-    await this.props.directory.createDirectory();
+    try {
+      await this.props.directory.createDirectory();
+    } catch {
+      //
+    }
 
     const files = await this.getDataFiles();
 
@@ -119,7 +127,11 @@ export class LocalFileAdapter<T extends PortableKeyObject>
     }
 
     const file = await this.fileGivenKey(key);
-    await file.toDirectory().createDirectory();
+    try {
+      await file.toDirectory().createDirectory();
+    } catch {
+      //
+    }
 
     const buffer = this.props.bufferGivenValue(value);
     await file.writeFile(buffer);

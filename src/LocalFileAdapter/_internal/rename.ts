@@ -13,7 +13,11 @@ export async function rename(
     throw new Error("toFile is required");
   }
 
-  await toFile.toDirectory().createDirectory();
+  try {
+    await toFile.toDirectory().createDirectory();
+  } catch {
+    //
+  }
 
   return new Promise((resolve, reject) => {
     const fromPath = fromFile.toAbsolutePath();
