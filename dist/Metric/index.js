@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Metric = void 0;
-const node_crypto_1 = require("@anderjason/node-crypto");
 const observable_1 = require("@anderjason/observable");
 const PropsObject_1 = require("../PropsObject");
 class Metric extends PropsObject_1.PropsObject {
@@ -24,9 +23,6 @@ class Metric extends PropsObject_1.PropsObject {
         this.entryMetricValues.sync(portableMetric.entryMetricValues);
     }
     async save() {
-        const hash = node_crypto_1.UnsaltedHash.givenUnhashedString(this.props.metricKey)
-            .toHashedString()
-            .slice(0, 24);
         if (this.entryMetricValues.count > 0) {
             const entryMetricValues = {};
             this.entryMetricValues.toKeys().forEach((entryKey) => {
@@ -36,10 +32,10 @@ class Metric extends PropsObject_1.PropsObject {
                 metricKey: this.props.metricKey,
                 entryMetricValues,
             };
-            await this.props.adapter.writeValue(hash, contents);
+            await this.props.adapter.writeValue(this.props.metricKey, contents);
         }
         else {
-            await this.props.adapter.deleteKey(hash);
+            await this.props.adapter.deleteKey(this.props.metricKey);
         }
     }
 }

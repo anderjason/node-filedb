@@ -6,7 +6,6 @@ export function bufferGivenPortableMetric(value: PortableMetric): Buffer {
     key: value.metricKey,
     ...value,
   };
-  delete obj.metricKey;
 
   return Buffer.from(JSON.stringify(obj));
 }

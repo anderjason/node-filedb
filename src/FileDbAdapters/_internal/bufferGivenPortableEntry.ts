@@ -6,7 +6,6 @@ export function bufferGivenPortableEntry(value: PortableEntry): Buffer {
     key: value.entryKey,
     ...value,
   };
-  delete obj.entryKey;
 
   return Buffer.from(JSON.stringify(obj, null, 2));
 }

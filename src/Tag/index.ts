@@ -1,4 +1,3 @@
-import { UnsaltedHash } from "@anderjason/node-crypto";
 import { ObservableSet } from "@anderjason/observable";
 import { FileDbAdapter } from "../FileDbAdapters";
 import { PropsObject } from "../PropsObject";
@@ -44,19 +43,15 @@ export class Tag extends PropsObject<TagProps> {
   }
 
   async save(): Promise<void> {
-    const hash = UnsaltedHash.givenUnhashedString(this.props.tagKey)
-      .toHashedString()
-      .slice(0, 24);
-
     if (this.entryKeys.count > 0) {
       const contents = {
         tagKey: this.props.tagKey,
         entryKeys: this.entryKeys.toArray(),
       };
 
-      await this.props.adapter.writeValue(hash, contents);
+      await this.props.adapter.writeValue(this.props.tagKey, contents);
     } else {
-      await this.props.adapter.deleteKey(hash);
+      await this.props.adapter.deleteKey(this.props.tagKey);
     }
   }
 }

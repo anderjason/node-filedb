@@ -6,7 +6,6 @@ export function bufferGivenPortableTag(value: PortableTag): Buffer {
     key: value.tagKey,
     ...value,
   };
-  delete obj.tagKey;
 
   return Buffer.from(JSON.stringify(obj));
 }

@@ -42,10 +42,6 @@ export class Metric extends PropsObject<MetricProps> {
   }
 
   async save(): Promise<void> {
-    const hash = UnsaltedHash.givenUnhashedString(this.props.metricKey)
-      .toHashedString()
-      .slice(0, 24);
-
     if (this.entryMetricValues.count > 0) {
       const entryMetricValues: PortableEntryMetricValues = {};
 
@@ -60,9 +56,9 @@ export class Metric extends PropsObject<MetricProps> {
         entryMetricValues,
       };
 
-      await this.props.adapter.writeValue(hash, contents);
+      await this.props.adapter.writeValue(this.props.metricKey, contents);
     } else {
-      await this.props.adapter.deleteKey(hash);
+      await this.props.adapter.deleteKey(this.props.metricKey);
     }
   }
 }

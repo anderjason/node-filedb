@@ -100,19 +100,7 @@ class LocalFileAdapter extends skytree_1.Actor {
         });
         return files;
     }
-    oldFileGivenKey(key) {
-        if (key == null) {
-            throw new Error("Key is required");
-        }
-        return node_filesystem_1.LocalFile.givenRelativePath(this.props.directory, key.slice(0, 3), `${key}.json`);
-    }
-    oldFile2GivenKey(key) {
-        const hash = node_crypto_1.UnsaltedHash.givenUnhashedString(key)
-            .toHashedString()
-            .slice(0, 24);
-        return node_filesystem_1.LocalFile.givenRelativePath(this.props.directory, hash.slice(0, 3), `${hash}.json`);
-    }
-    newFileGivenKey(key) {
+    async fileGivenKey(key) {
         if (key == null) {
             throw new Error("Key is required");
         }
@@ -120,29 +108,6 @@ class LocalFileAdapter extends skytree_1.Actor {
             .toHashedString()
             .slice(0, 16);
         return node_filesystem_1.LocalFile.givenRelativePath(this.props.directory, hash.slice(0, 1), hash.slice(1, 2), hash.slice(2, 3), `${hash}.json`);
-    }
-    async fileGivenKey(key) {
-        if (key == null) {
-            throw new Error("Key is required");
-        }
-        const newFile = this.newFileGivenKey(key);
-        const oldFile = this.oldFileGivenKey(key);
-        const oldFileExists = await oldFile.isAccessible();
-        if (oldFileExists == true) {
-            console.log(`Renaming ${oldFile.toAbsolutePath()} to ${newFile.toAbsolutePath()}...`);
-            await newFile.toDirectory().createDirectory();
-            await rename_1.rename(oldFile, newFile);
-        }
-        else {
-            const oldFile2 = this.oldFile2GivenKey(key);
-            const oldFile2Exists = await oldFile2.isAccessible();
-            if (oldFile2Exists == true) {
-                console.log(`Renaming ${oldFile2.toAbsolutePath()} to ${newFile.toAbsolutePath()}...`);
-                await newFile.toDirectory().createDirectory();
-                await rename_1.rename(oldFile2, newFile);
-            }
-        }
-        return newFile;
     }
     async rebuild() {
         const files = await this.getDataFiles();
@@ -153,7 +118,7 @@ class LocalFileAdapter extends skytree_1.Actor {
             const key = this.props.keyGivenValue(portableValueResult.value);
             buffer = this.props.bufferGivenValue(portableValueResult.value);
             await file.writeFile(buffer);
-            const expectedFile = this.newFileGivenKey(key);
+            const expectedFile = await this.fileGivenKey(key);
             await rename_1.rename(file, expectedFile);
         });
     }
