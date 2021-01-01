@@ -35,6 +35,12 @@ class Tag extends PropsObject_1.PropsObject {
             await this.props.adapter.deleteKey(this.props.tagKey);
         }
     }
+    toObject() {
+        return {
+            tagKey: this.tagKey,
+            entryKeys: this.entryKeys.toArray(),
+        };
+    }
 }
 exports.Tag = Tag;
 //# sourceMappingURL=index.js.map

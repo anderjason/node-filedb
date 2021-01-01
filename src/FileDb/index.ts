@@ -97,7 +97,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
   }
 
   onActivate(): void {
-    this.addActor(this.props.adapters);
+    this.addActor(this.adapters);
 
     this.load();
   }

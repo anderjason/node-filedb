@@ -38,6 +38,12 @@ class Metric extends PropsObject_1.PropsObject {
             await this.props.adapter.deleteKey(this.props.metricKey);
         }
     }
+    toObject() {
+        return {
+            metricKey: this.metricKey,
+            entryMetricValues: this.entryMetricValues.toValues(),
+        };
+    }
 }
 exports.Metric = Metric;
 //# sourceMappingURL=index.js.map

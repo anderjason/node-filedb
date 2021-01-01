@@ -24,6 +24,16 @@ class Entry extends PropsObject_1.PropsObject {
             this.metricValues.sync(this.props.metricValues);
         }
     }
+    toObject() {
+        return {
+            entryKey: this.entryKey,
+            tagKeys: this.tagKeys.toArray(),
+            metricValues: this.metricValues.toValues(),
+            createdAt: this.createdAt.value,
+            updatedAt: this.updatedAt.value,
+            data: this.data.value,
+        };
+    }
 }
 exports.Entry = Entry;
 //# sourceMappingURL=index.js.map

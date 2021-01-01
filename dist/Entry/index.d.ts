@@ -17,4 +17,5 @@ export declare class Entry<T> extends PropsObject<EntryProps<T>> {
     readonly updatedAt: Observable<Instant>;
     readonly data: Observable<T>;
     constructor(props: EntryProps<T>);
+    toObject(): any;
 }

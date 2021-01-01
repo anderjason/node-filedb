@@ -54,4 +54,11 @@ export class Tag extends PropsObject<TagProps> {
       await this.props.adapter.deleteKey(this.props.tagKey);
     }
   }
+
+  toObject(): any {
+    return {
+      tagKey: this.tagKey,
+      entryKeys: this.entryKeys.toArray(),
+    };
+  }
 }

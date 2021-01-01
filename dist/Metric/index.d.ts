@@ -12,4 +12,5 @@ export declare class Metric extends PropsObject<MetricProps> {
     constructor(props: MetricProps);
     load(): Promise<void>;
     save(): Promise<void>;
+    toObject(): any;
 }

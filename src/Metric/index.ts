@@ -61,4 +61,11 @@ export class Metric extends PropsObject<MetricProps> {
       await this.props.adapter.deleteKey(this.props.metricKey);
     }
   }
+
+  toObject(): any {
+    return {
+      metricKey: this.metricKey,
+      entryMetricValues: this.entryMetricValues.toValues(),
+    };
+  }
 }

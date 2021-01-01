@@ -262,7 +262,7 @@ class FileDb extends skytree_1.Actor {
         this._entryCache = new LRUCache_1.LRUCache(props.cacheSize || 10);
     }
     onActivate() {
-        this.addActor(this.props.adapters);
+        this.addActor(this.adapters);
         this.load();
     }
     get tags() {

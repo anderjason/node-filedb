@@ -13,4 +13,5 @@ export declare class Tag extends PropsObject<TagProps> {
     constructor(props: TagProps);
     load(): Promise<void>;
     save(): Promise<void>;
+    toObject(): any;
 }

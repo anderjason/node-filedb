@@ -43,4 +43,15 @@ export class Entry<T> extends PropsObject<EntryProps<T>> {
       this.metricValues.sync(this.props.metricValues);
     }
   }
+
+  toObject(): any {
+    return {
+      entryKey: this.entryKey,
+      tagKeys: this.tagKeys.toArray(),
+      metricValues: this.metricValues.toValues(),
+      createdAt: this.createdAt.value,
+      updatedAt: this.updatedAt.value,
+      data: this.data.value,
+    };
+  }
 }
