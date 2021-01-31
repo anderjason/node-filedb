@@ -6,7 +6,7 @@ import { FileDbAdapters } from "../FileDbAdapters";
 Test.define("FileDb can be created", () => {
   const fileDb = new FileDb({
     adapters: FileDbAdapters.ofMemory(),
-    tagKeysGivenEntryData: (data) => new Set(),
+    tagKeysGivenEntryData: (data) => [],
     metricsGivenEntryData: (data) => ({}),
   });
   fileDb.activate();
@@ -17,7 +17,7 @@ Test.define("FileDb can be created", () => {
 Test.define("FileDb can write and read a row", async () => {
   const fileDb = new FileDb<any>({
     adapters: FileDbAdapters.ofMemory(),
-    tagKeysGivenEntryData: (data) => new Set(),
+    tagKeysGivenEntryData: (data) => [],
     metricsGivenEntryData: (data) => ({}),
   });
   fileDb.activate();
@@ -26,13 +26,13 @@ Test.define("FileDb can write and read a row", async () => {
     message: "hello world",
   });
 
-  Test.assert(entry.entryKey != null);
-  Test.assert(entry.entryKey.length == 36);
+  Test.assert(entry.key != null);
+  Test.assert(entry.key.length == 36);
   Test.assert(entry.createdAt != null);
   Test.assert(entry.updatedAt != null);
-  Test.assert(entry.data.value.message === "hello world");
+  Test.assert(entry.data.message === "hello world");
 
-  const result = await fileDb.toEntryGivenKey(entry.entryKey);
+  const result = await fileDb.toEntryGivenKey(entry.key);
   Test.assertIsDeepEqual(result, entry);
 
   fileDb.deactivate();
@@ -42,12 +42,7 @@ Test.define("FileDb can assign rows to collections", async () => {
   const fileDb = new FileDb<any>({
     adapters: FileDbAdapters.ofMemory(),
     tagKeysGivenEntryData: (data) => {
-      const result = new Set<string>();
-
-      result.add("testset1");
-      result.add("testset2");
-
-      return result;
+      return ["testset1", "testset2"];
     },
     metricsGivenEntryData: (data) => ({}),
   });
@@ -57,8 +52,8 @@ Test.define("FileDb can assign rows to collections", async () => {
     message: "hello world",
   });
 
-  Test.assert(entry.tagKeys.hasValue("testset1"));
-  Test.assert(entry.tagKeys.hasValue("testset2"));
+  Test.assert(entry.tagKeys.includes("testset1"));
+  Test.assert(entry.tagKeys.includes("testset2"));
 
   fileDb.deactivate();
 });
@@ -66,7 +61,7 @@ Test.define("FileDb can assign rows to collections", async () => {
 Test.define("FileDb can assign values by index", async () => {
   const fileDb = new FileDb<any>({
     adapters: FileDbAdapters.ofMemory(),
-    tagKeysGivenEntryData: (data) => new Set(),
+    tagKeysGivenEntryData: (data) => [],
     metricsGivenEntryData: (data) => {
       const result: Dict<number> = {};
 
@@ -82,8 +77,8 @@ Test.define("FileDb can assign values by index", async () => {
     message: "hello world",
   });
 
-  Test.assert(row.metricValues.toOptionalValueGivenKey("size") === 5);
-  Test.assert(row.metricValues.toOptionalValueGivenKey("views") === 23);
+  Test.assert(row.metricValues.size === 5);
+  Test.assert(row.metricValues.views === 23);
 
   fileDb.deactivate();
 });

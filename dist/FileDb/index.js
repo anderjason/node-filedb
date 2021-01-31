@@ -15,16 +15,17 @@ class FileDb extends skytree_1.Actor {
         super(props);
         this._isReady = observable_1.Observable.givenValue(false, observable_1.Observable.isStrictEqual);
         this.isReady = observable_1.ReadOnlyObservable.givenObservable(this._isReady);
-        this._tagPrefixes = observable_1.ObservableSet.ofEmpty();
-        this._tags = observable_1.ObservableDict.ofEmpty();
-        this._metrics = observable_1.ObservableDict.ofEmpty();
-        this._allEntryKeys = observable_1.Observable.ofEmpty();
+        this._tagPrefixes = new Set();
+        this._tags = new Map();
+        this._metrics = new Map();
+        this._allEntryKeys = new Set();
         this._instructions = [];
         this._deleteEntry = async (entryKey) => {
             if (entryKey.length < 5) {
                 throw new Error("Entry key length must be at least 5 characters");
             }
             this._entryCache.remove(entryKey);
+            this._allEntryKeys.delete(entryKey);
             const existingRecord = await this.toOptionalEntryGivenKey(entryKey);
             if (existingRecord == null) {
                 return;
@@ -35,7 +36,7 @@ class FileDb extends skytree_1.Actor {
             const changedTags = new Set();
             const changedMetrics = new Set();
             existingRecord.tagKeys.forEach((tagKey) => {
-                const tag = this._tags.toOptionalValueGivenKey(tagKey);
+                const tag = this._tags.get(tagKey);
                 if (tag != null && tag.entryKeys.has(entryKey)) {
                     tag.entryKeys.delete(entryKey);
                     changedTags.add(tag);
@@ -43,7 +44,7 @@ class FileDb extends skytree_1.Actor {
             });
             const metricKeys = Object.keys(existingRecord.metricValues);
             metricKeys.forEach((metricKey) => {
-                const metric = this._metrics.toOptionalValueGivenKey(metricKey);
+                const metric = this._metrics.get(metricKey);
                 if (metric != null && metric.hasValueGivenEntryKey(entryKey)) {
                     metric.removeValueGivenEntryKey(entryKey);
                     changedMetrics.add(metric);
@@ -110,17 +111,18 @@ class FileDb extends skytree_1.Actor {
             }
             entry.metricValues.createdAt = entry.createdAt.toEpochMilliseconds();
             this._entryCache.put(entryKey, entry);
+            this._allEntryKeys.add(entryKey);
             const portableEntry = entry.toPortableObject();
             const changedTags = new Set();
             const changedMetrics = new Set();
             entry.tagKeys.forEach((tagKey) => {
-                let tag = this._tags.toOptionalValueGivenKey(tagKey);
+                let tag = this._tags.get(tagKey);
                 if (tag == null) {
                     tag = new Tag_1.Tag({
                         tagKey,
                         adapter: this.props.adapters.props.tagsAdapter,
                     });
-                    this._tags.setValue(tagKey, tag);
+                    this._tags.set(tagKey, tag);
                 }
                 if (!tag.entryKeys.has(entryKey)) {
                     tag.entryKeys.add(entryKey);
@@ -129,13 +131,13 @@ class FileDb extends skytree_1.Actor {
             });
             const metricKeys = Object.keys(entry.metricValues);
             metricKeys.forEach((metricKey) => {
-                let metric = this._metrics.toOptionalValueGivenKey(metricKey);
+                let metric = this._metrics.get(metricKey);
                 if (metric == null) {
                     metric = new Metric_1.Metric({
                         metricKey,
                         adapter: this.props.adapters.props.metricsAdapter,
                     });
-                    this._metrics.setValue(metricKey, metric);
+                    this._metrics.set(metricKey, metric);
                 }
                 const metricValue = entry.metricValues[metricKey];
                 if (metric.toOptionalValueGivenEntryKey(entryKey) !== metricValue) {
@@ -158,11 +160,11 @@ class FileDb extends skytree_1.Actor {
                 await this.ensureReady();
             }
             if (options.requireTagKeys == null || options.requireTagKeys.length === 0) {
-                entryKeys = this._allEntryKeys.value;
+                entryKeys = Array.from(this._allEntryKeys);
             }
             else {
                 const sets = options.requireTagKeys.map((tagKey) => {
-                    const tag = this._tags.toOptionalValueGivenKey(tagKey);
+                    const tag = this._tags.get(tagKey);
                     if (tag == null) {
                         return new Set();
                     }
@@ -172,7 +174,7 @@ class FileDb extends skytree_1.Actor {
             }
             const metricKey = options.orderByMetricKey;
             if (metricKey != null) {
-                const metric = this._metrics.toOptionalValueGivenKey(metricKey);
+                const metric = this._metrics.get(metricKey);
                 if (metric == null) {
                     throw new Error(`Metric is not defined '${metricKey}'`);
                 }
@@ -246,13 +248,13 @@ class FileDb extends skytree_1.Actor {
         this.load();
     }
     get tags() {
-        return Object.values(this._tags.toValues());
+        return Array.from(this._tags.values());
     }
     get metrics() {
-        return Object.values(this._metrics.toValues());
+        return Array.from(this._metrics.values());
     }
     get tagPrefixes() {
-        return this._tagPrefixes.toArray();
+        return Array.from(this._tagPrefixes);
     }
     async load() {
         if (this.isActive.value == false) {
@@ -270,8 +272,8 @@ class FileDb extends skytree_1.Actor {
                 adapter: tagsAdapter,
             });
             await tag.load();
-            this._tags.setValue(tagKey, tag);
-            this._tagPrefixes.addValue(tag.tagPrefix);
+            this._tags.set(tagKey, tag);
+            this._tagPrefixes.add(tag.tagPrefix);
         });
         await util_1.PromiseUtil.asyncSequenceGivenArrayAndCallback(metricKeys, async (metricKey) => {
             const metric = new Metric_1.Metric({
@@ -279,9 +281,9 @@ class FileDb extends skytree_1.Actor {
                 adapter: metricsAdapter,
             });
             await metric.load();
-            this._metrics.setValue(metricKey, metric);
+            this._metrics.set(metricKey, metric);
         });
-        this._allEntryKeys.setValue(entryKeys);
+        this._allEntryKeys = new Set(entryKeys);
         this._isReady.setValue(true);
     }
     async toEntryKeys(options = {}) {

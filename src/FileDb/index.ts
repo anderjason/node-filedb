@@ -10,8 +10,6 @@ import { FileDbAdapters } from "../FileDbAdapters";
 import {
   Dict,
   Observable,
-  ObservableDict,
-  ObservableSet,
   ReadOnlyObservable,
 } from "@anderjason/observable";
 
@@ -80,10 +78,10 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
   readonly isReady = ReadOnlyObservable.givenObservable(this._isReady);
 
   private _entryCache: LRUCache<Entry<T>>;
-  private _tagPrefixes = ObservableSet.ofEmpty<string>();
-  private _tags = ObservableDict.ofEmpty<Tag>();
-  private _metrics = ObservableDict.ofEmpty<Metric>();
-  private _allEntryKeys = Observable.ofEmpty<string[]>();
+  private _tagPrefixes = new Set<string>();
+  private _tags = new Map<string, Tag>();
+  private _metrics = new Map<string, Metric>();
+  private _allEntryKeys = new Set<string>();
   private _instructions: FileDbInstruction<T>[] = [];
 
   readonly adapters: FileDbAdapters;
@@ -102,15 +100,15 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
   }
 
   get tags(): Tag[] {
-    return Object.values(this._tags.toValues());
+    return Array.from(this._tags.values());
   }
 
   get metrics(): Metric[] {
-    return Object.values(this._metrics.toValues());
+    return Array.from(this._metrics.values());
   }
 
   get tagPrefixes(): string[] {
-    return this._tagPrefixes.toArray();
+    return Array.from(this._tagPrefixes);
   }
 
   private async load(): Promise<void> {
@@ -136,8 +134,8 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
 
         await tag.load();
 
-        this._tags.setValue(tagKey, tag);
-        this._tagPrefixes.addValue(tag.tagPrefix);
+        this._tags.set(tagKey, tag);
+        this._tagPrefixes.add(tag.tagPrefix);
       }
     );
 
@@ -151,11 +149,11 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
 
         await metric.load();
 
-        this._metrics.setValue(metricKey, metric);
+        this._metrics.set(metricKey, metric);
       }
     );
 
-    this._allEntryKeys.setValue(entryKeys);
+    this._allEntryKeys = new Set(entryKeys);
 
     this._isReady.setValue(true);
   }
@@ -290,6 +288,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     }
 
     this._entryCache.remove(entryKey);
+    this._allEntryKeys.delete(entryKey);
 
     const existingRecord = await this.toOptionalEntryGivenKey(entryKey);
     if (existingRecord == null) {
@@ -304,7 +303,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     const changedMetrics = new Set<Metric>();
 
     existingRecord.tagKeys.forEach((tagKey) => {
-      const tag = this._tags.toOptionalValueGivenKey(tagKey);
+      const tag = this._tags.get(tagKey);
 
       if (tag != null && tag.entryKeys.has(entryKey)) {
         tag.entryKeys.delete(entryKey);
@@ -314,7 +313,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
 
     const metricKeys = Object.keys(existingRecord.metricValues);
     metricKeys.forEach((metricKey) => {
-      const metric = this._metrics.toOptionalValueGivenKey(metricKey);
+      const metric = this._metrics.get(metricKey);
 
       if (metric != null && metric.hasValueGivenEntryKey(entryKey)) {
         metric.removeValueGivenEntryKey(entryKey);
@@ -415,6 +414,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     entry.metricValues.createdAt = entry.createdAt.toEpochMilliseconds();
 
     this._entryCache.put(entryKey, entry);
+    this._allEntryKeys.add(entryKey);
 
     const portableEntry = entry.toPortableObject();
 
@@ -422,13 +422,13 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     const changedMetrics = new Set<Metric>();
 
     entry.tagKeys.forEach((tagKey) => {
-      let tag = this._tags.toOptionalValueGivenKey(tagKey);
+      let tag = this._tags.get(tagKey);
       if (tag == null) {
         tag = new Tag({
           tagKey,
           adapter: this.props.adapters.props.tagsAdapter,
         });
-        this._tags.setValue(tagKey, tag);
+        this._tags.set(tagKey, tag);
       }
 
       if (!tag.entryKeys.has(entryKey)) {
@@ -440,13 +440,13 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     const metricKeys = Object.keys(entry.metricValues);
 
     metricKeys.forEach((metricKey) => {
-      let metric = this._metrics.toOptionalValueGivenKey(metricKey);
+      let metric = this._metrics.get(metricKey);
       if (metric == null) {
         metric = new Metric({
           metricKey,
           adapter: this.props.adapters.props.metricsAdapter,
         });
-        this._metrics.setValue(metricKey, metric);
+        this._metrics.set(metricKey, metric);
       }
 
       const metricValue = entry.metricValues[metricKey];
@@ -489,10 +489,10 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
     }
 
     if (options.requireTagKeys == null || options.requireTagKeys.length === 0) {
-      entryKeys = this._allEntryKeys.value;
+      entryKeys = Array.from(this._allEntryKeys);
     } else {
       const sets = options.requireTagKeys.map((tagKey) => {
-        const tag = this._tags.toOptionalValueGivenKey(tagKey);
+        const tag = this._tags.get(tagKey);
         if (tag == null) {
           return new Set<string>();
         }
@@ -505,7 +505,7 @@ export class FileDb<T> extends Actor<FileDbProps<T>> {
 
     const metricKey = options.orderByMetricKey;
     if (metricKey != null) {
-      const metric = this._metrics.toOptionalValueGivenKey(metricKey);
+      const metric = this._metrics.get(metricKey);
       if (metric == null) {
         throw new Error(`Metric is not defined '${metricKey}'`);
       }

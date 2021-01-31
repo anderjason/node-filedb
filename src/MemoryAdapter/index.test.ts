@@ -2,13 +2,17 @@ import { Test } from "@anderjason/tests";
 import { MemoryAdapter } from "./";
 
 Test.define("MemoryAdapter can write and read a string", async () => {
-  const adapter = new MemoryAdapter<string>();
+  class TestType {
+    key: string;
+  }
+
+  const adapter = new MemoryAdapter<TestType>();
   adapter.activate();
 
-  await adapter.writeValue("message", "hello world");
+  await adapter.writeValue("message", { key: "key123" });
 
   const actual = await adapter.toOptionalValueGivenKey("message");
-  Test.assertIsEqual(actual, "hello world");
+  Test.assertIsEqual(actual.key, "key123");
 
   adapter.deactivate();
 });
